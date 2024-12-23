@@ -35,7 +35,8 @@ jobs:
           fi
           
           echo "Changed Services: $JSON_SERVICES"
-          echo "changed-services=$JSON_SERVICES" >> $GITHUB_ENV  # Use environment file instead of set-output
+          # Remove leading and trailing whitespaces and set the environment variable
+          echo "changed-services=$(echo $JSON_SERVICES | sed 's/^[ \t]*//;s/[ \t]*$//')" >> $GITHUB_ENV  # Use environment file without extra whitespace  
 
       - name: Debug Output
         run: |
