@@ -22,7 +22,7 @@ jobs:
         id: detect
         run: |
           # Get the list of changed files
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
           
           # Filter out unique top-level directories within 'core-services'
           CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^core-services/' | cut -d'/' -f1,2 | uniq)
@@ -36,6 +36,10 @@ jobs:
           
           echo "Changed Services: $JSON_SERVICES"
           echo "::set-output name=changed-services::$JSON_SERVICES"
+        
+      - name: Debug Output
+        run: |
+          echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
 
   build-and-deploy:
     needs: detect-changes
@@ -50,16 +54,12 @@ jobs:
 
       - name: Build Service
         run: |
+          echo "Building Service: ${{ matrix.service }}"
           cd ${{ matrix.service }}
           ./build.sh
 
       - name: Package Service
         run: |
+          echo "Packaging Service: ${{ matrix.service }}"
           cd ${{ matrix.service }}
           ./package.sh
-
-      # Uncomment this block if you want to include deployment
-      # - name: Deploy Service
-      #   run: |
-      #     cd ${{ matrix.service }}
-      #     ./deploy.sh
