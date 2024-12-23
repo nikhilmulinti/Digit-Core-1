@@ -1,0 +1,57 @@
+name: Dynamic Build and Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - master  # Trigger pipeline on changes pushed to the master branch
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  determine-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-services: ${{ steps.set-output.outputs.changed-services }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      - name: Identify Changed Services
+        id: set-output
+        run: |
+          # Get the list of changed files
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          
+          # Filter out unique top-level directories within 'core-services'
+          CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^core-services/' | cut -d'/' -f1,2 | uniq)
+          
+          # Convert to JSON array for the matrix
+          JSON_SERVICES=$(echo "$CHANGED_SERVICES" | jq -R . | jq -s .)
+          
+          echo "Changed Services: $JSON_SERVICES"
+          echo "::set-output name=changed-services::$JSON_SERVICES"
+
+  build-and-deploy:
+    needs: determine-changes
+    if: ${{ needs.determine-changes.outputs.changed-services != '[]' }} # Proceed only if services changed
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.determine-changes.outputs.changed-services) }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Build Service
+        run: |
+          cd ${{ matrix.service }}
+          ./build.sh
+
+      - name: Package Service
+        run: |
+          cd ${{ matrix.service }}
+          ./package.sh
+
+      # - name: Deploy Service
+      #   run: |
+      #     cd ${{ matrix.service }}
+      #     ./deploy.sh
