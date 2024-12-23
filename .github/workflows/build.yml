@@ -37,10 +37,9 @@ jobs:
           
           echo "Changed Services: $CHANGED_SERVICES"
           
-          # Output the result as a JSON array (with correct formatting)
+          # Output the result as a valid JSON array
           if [[ -n "$CHANGED_SERVICES" ]]; then
-            # Creating a JSON array by adding square brackets and separating services with commas
-            CHANGED_SERVICES_JSON="[$(echo $CHANGED_SERVICES | sed 's/,/","/g')]"
+            CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
             echo "::set-output name=changed-services::$CHANGED_SERVICES_JSON"
           else
             echo "::set-output name=changed-services::[]"
