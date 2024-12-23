@@ -74,8 +74,10 @@ jobs:
           echo "Checking if DB folder exists for service: ${{ matrix.service }}"
           FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
           if [ -d "$FOLDER_PATH" ]; then
+            echo "DB folder exists at $FOLDER_PATH"
             echo "folder_exists=true" >> $GITHUB_ENV
           else
+            echo "DB folder does not exist at $FOLDER_PATH"
             echo "folder_exists=false" >> $GITHUB_ENV
           fi
 
