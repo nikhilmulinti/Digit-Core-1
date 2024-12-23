@@ -7,16 +7,19 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  determine-changes:
+  detect-changes:
+    name: Detect Changed Services
     runs-on: ubuntu-latest
     outputs:
-      changed-services: ${{ steps.set-output.outputs.changed-services }}
+      changed-services: ${{ steps.detect.outputs.changed-services }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-      
-      - name: Identify Changed Services
-        id: set-output
+        with:
+          fetch-depth: 2  # Fetch the last two commits to allow HEAD~1
+
+      - name: Detect Changed Services
+        id: detect
         run: |
           # Get the list of changed files
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
@@ -31,12 +34,12 @@ jobs:
           echo "::set-output name=changed-services::$JSON_SERVICES"
 
   build-and-deploy:
-    needs: determine-changes
-    if: ${{ needs.determine-changes.outputs.changed-services != '[]' }} # Proceed only if services changed
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.changed-services != '[]' }} # Proceed only if services changed
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: ${{ fromJson(needs.determine-changes.outputs.changed-services) }}
+        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -51,6 +54,7 @@ jobs:
           cd ${{ matrix.service }}
           ./package.sh
 
+      # Uncomment this block if you want to include deployment
       # - name: Deploy Service
       #   run: |
       #     cd ${{ matrix.service }}
