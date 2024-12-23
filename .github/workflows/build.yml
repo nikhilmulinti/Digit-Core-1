@@ -36,8 +36,8 @@ jobs:
           
           echo "Changed Services: $JSON_SERVICES"
           
-          # Make sure the output is correctly formatted
-          echo "changed-services=$JSON_SERVICES" >> $GITHUB_ENV  # Correct output format using $GITHUB_ENV
+          # Remove leading and trailing whitespace before writing to GITHUB_ENV
+          echo "changed-services=$(echo $JSON_SERVICES | sed 's/^[ \t]*//;s/[ \t]*$//')" >> $GITHUB_ENV  # Correct output format using $GITHUB_ENV
           
       - name: Debug Output
         run: |
