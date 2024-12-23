@@ -131,21 +131,21 @@ jobs:
       - name: Build and Push Application Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: core-services/${{ matrix.service }}
-          file: core-services/${{ matrix.service }}/build/maven/Dockerfile
+          context: .
+          file: build/maven/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
       
-      - name: Build and Push Database Docker Image
-        if: ${{ env.folder_exists == 'true' }}
-        uses: docker/build-push-action@v5
-        with:
-          context: core-services/${{ matrix.service }}/src/main/resources/db
-          file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+      # - name: Build and Push Database Docker Image
+      #   if: ${{ env.folder_exists == 'true' }}
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: core-services/${{ matrix.service }}/src/main/resources/db
+      #     file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
+      #     push: true
+      #     tags: |
+      #       ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
       
