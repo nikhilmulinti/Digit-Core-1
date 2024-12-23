@@ -60,15 +60,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Build Service
+      - name: Build Service with Docker
         run: |
           echo "Building Service: ${{ matrix.service }}"
-          cd core-services/${{ matrix.service }}  # Correct path to the service directory
-          ./build.sh
+          cd core-services/${{ matrix.service }}  # Navigate to the service directory
+          docker build -t ${{ matrix.service }} .  # Build Docker image for the service
 
-      - name: Package Service
+      - name: Package Service with Docker
         run: |
           echo "Packaging Service: ${{ matrix.service }}"
-          cd core-services/${{ matrix.service }}  # Correct path to the service directory
-          ./package.sh
+          cd core-services/${{ matrix.service }}  # Navigate to the service directory
+          docker save -o ${{ matrix.service }}.tar ${{ matrix.service }}  # Save Docker image to a tarball
+
 
