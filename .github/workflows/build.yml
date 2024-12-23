@@ -35,8 +35,8 @@ jobs:
           fi
           
           echo "Changed Services: $JSON_SERVICES"
-          echo "::set-output name=changed-services::$JSON_SERVICES"
-        
+          echo "changed-services=$JSON_SERVICES" >> $GITHUB_ENV  # Use environment file instead of set-output
+
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
