@@ -45,25 +45,25 @@ jobs:
           echo "Changed Services: ${{ env.changed-services }}"
 
 
-  # build-and-deploy:
-  #   needs: detect-changes
-  #   if: ${{ needs.detect-changes.outputs.changed-services != '[]' }} # Proceed only if services changed
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v3
+  build-and-deploy:
+    needs: detect-changes
+    if: ${{ env.changed-services != '' }}  # Proceed only if services changed (non-empty)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson('["' + env.changed-services | replace(',', '","') + '"]') }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-  #     - name: Build Service
-  #       run: |
-  #         echo "Building Service: ${{ matrix.service }}"
-  #         cd ${{ matrix.service }}
-  #         ./build.sh
+      - name: Build Service
+        run: |
+          echo "Building Service: ${{ matrix.service }}"
+          cd ${{ matrix.service }}
+          ./build.sh
 
-  #     - name: Package Service
-  #       run: |
-  #         echo "Packaging Service: ${{ matrix.service }}"
-  #         cd ${{ matrix.service }}
-  #         ./package.sh
+      - name: Package Service
+        run: |
+          echo "Packaging Service: ${{ matrix.service }}"
+          cd ${{ matrix.service }}
+          ./package.sh
