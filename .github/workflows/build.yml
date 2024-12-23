@@ -63,13 +63,13 @@ jobs:
       - name: Build Service with Docker
         run: |
           echo "Building Service: ${{ matrix.service }}"
-          cd core-services/${{ matrix.service }}  # Navigate to the service directory
+          cd core-services/${{ matrix.service }}/src/main/resources/db
           docker build -t ${{ matrix.service }} .  # Build Docker image for the service
 
-      - name: Package Service with Docker
-        run: |
-          echo "Packaging Service: ${{ matrix.service }}"
-          cd core-services/${{ matrix.service }}  # Navigate to the service directory
-          docker save -o ${{ matrix.service }}.tar ${{ matrix.service }}  # Save Docker image to a tarball
+      # - name: Package Service with Docker
+      #   run: |
+      #     echo "Packaging Service: ${{ matrix.service }}"
+      #     cd core-services/${{ matrix.service }}/src/main/resources/db
+      #     docker save -o ${{ matrix.service }}.tar ${{ matrix.service }}  # Save Docker image to a tarball
 
 
