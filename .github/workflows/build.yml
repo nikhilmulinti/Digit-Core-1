@@ -28,7 +28,11 @@ jobs:
           CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^core-services/' | cut -d'/' -f1,2 | uniq)
           
           # Convert to JSON array for the matrix
-          JSON_SERVICES=$(echo "$CHANGED_SERVICES" | jq -R . | jq -s .)
+          if [[ -z "$CHANGED_SERVICES" ]]; then
+            JSON_SERVICES="[]"
+          else
+            JSON_SERVICES=$(echo "$CHANGED_SERVICES" | jq -R . | jq -s .)
+          fi
           
           echo "Changed Services: $JSON_SERVICES"
           echo "::set-output name=changed-services::$JSON_SERVICES"
