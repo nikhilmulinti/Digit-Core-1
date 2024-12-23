@@ -35,32 +35,34 @@ jobs:
           fi
           
           echo "Changed Services: $JSON_SERVICES"
-          # Remove leading and trailing whitespaces and set the environment variable
-          echo "changed-services=$(echo $JSON_SERVICES | sed 's/^[ \t]*//;s/[ \t]*$//')" >> $GITHUB_ENV  # Use environment file without extra whitespace  
-
+          
+          # Make sure the output is correctly formatted
+          echo "changed-services=$JSON_SERVICES" >> $GITHUB_ENV  # Correct output format using $GITHUB_ENV
+          
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
 
-  build-and-deploy:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.changed-services != '[]' }} # Proceed only if services changed
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      - name: Build Service
-        run: |
-          echo "Building Service: ${{ matrix.service }}"
-          cd ${{ matrix.service }}
-          ./build.sh
+  # build-and-deploy:
+  #   needs: detect-changes
+  #   if: ${{ needs.detect-changes.outputs.changed-services != '[]' }} # Proceed only if services changed
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v3
 
-      - name: Package Service
-        run: |
-          echo "Packaging Service: ${{ matrix.service }}"
-          cd ${{ matrix.service }}
-          ./package.sh
+  #     - name: Build Service
+  #       run: |
+  #         echo "Building Service: ${{ matrix.service }}"
+  #         cd ${{ matrix.service }}
+  #         ./build.sh
+
+  #     - name: Package Service
+  #       run: |
+  #         echo "Packaging Service: ${{ matrix.service }}"
+  #         cd ${{ matrix.service }}
+  #         ./package.sh
