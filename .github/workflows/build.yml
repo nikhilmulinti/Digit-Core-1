@@ -49,7 +49,6 @@ jobs:
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
 
-
   build-and-deploy:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}  # Proceed only if services changed (non-empty)
@@ -64,11 +63,12 @@ jobs:
       - name: Build Service
         run: |
           echo "Building Service: ${{ matrix.service }}"
-          cd ${{ matrix.service }}
+          cd core-services/${{ matrix.service }}  # Correct path to the service directory
           ./build.sh
 
       - name: Package Service
         run: |
           echo "Packaging Service: ${{ matrix.service }}"
-          cd ${{ matrix.service }}
+          cd core-services/${{ matrix.service }}  # Correct path to the service directory
           ./package.sh
+
