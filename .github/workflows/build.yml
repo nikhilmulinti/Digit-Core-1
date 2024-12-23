@@ -27,21 +27,22 @@ jobs:
           # Filter out unique top-level directories within 'core-services'
           CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^core-services/' | cut -d'/' -f1,2 | uniq)
           
-          # Convert to JSON array for the matrix
+          # Convert to a plain comma-separated string if there are any services
           if [[ -z "$CHANGED_SERVICES" ]]; then
-            JSON_SERVICES="[]"
+            CHANGED_SERVICES=""
           else
-            JSON_SERVICES=$(echo "$CHANGED_SERVICES" | jq -R . | jq -s .)
+            CHANGED_SERVICES=$(echo "$CHANGED_SERVICES" | tr '\n' ',')
+            CHANGED_SERVICES=${CHANGED_SERVICES%,}  # Remove trailing comma
           fi
           
-          echo "Changed Services: $JSON_SERVICES"
+          echo "Changed Services: $CHANGED_SERVICES"
           
-          # Remove leading and trailing whitespace before writing to GITHUB_ENV
-          echo "changed-services=$(echo $JSON_SERVICES | sed 's/^[ \t]*//;s/[ \t]*$//')" >> $GITHUB_ENV  # Correct output format using $GITHUB_ENV
-          
+          # Set the environment variable in the correct format for later use
+          echo "changed-services=$CHANGED_SERVICES" >> $GITHUB_ENV
+
       - name: Debug Output
         run: |
-          echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
+          echo "Changed Services: ${{ env.changed-services }}"
 
 
   # build-and-deploy:
