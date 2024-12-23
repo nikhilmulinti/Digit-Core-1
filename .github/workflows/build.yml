@@ -25,7 +25,7 @@ jobs:
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
           
           # Filter out unique top-level directories within 'core-services'
-          CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^core-services/' | cut -d'/' -f1,2 | uniq)
+          CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^core-services/' | cut -d'/' -f2 | uniq)
           
           # Convert to a plain comma-separated string if there are any services
           if [[ -z "$CHANGED_SERVICES" ]]; then
