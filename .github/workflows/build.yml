@@ -156,3 +156,28 @@ jobs:
 
       #     echo "${{ secrets.DOCKER_USERNAME }}/${{
       #     github.event.inputs.serviceName }}-db:${{ steps.tag.outputs.tag }}"
+  Deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Clone Deployment Repository
+        uses: actions/checkout@v3
+        with:
+          repository: Harish-test-12/DIGIT-DevOps-1
+          fetch-depth: 0
+
+      - name: Install SOPS
+        run: |
+          echo "Checking if SOPS is installed..."
+          if ! command -v sops &> /dev/null; then
+            echo "SOPS not found. Installing..."
+            SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
+            curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/v${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION}_amd64.deb"
+            sudo apt --fix-broken install ./sops.deb
+            sudo apt-get update
+            sudo apt-get install sops
+          else
+            echo "SOPS is already installed, skipping installation."
+          fi
