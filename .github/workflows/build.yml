@@ -160,179 +160,181 @@ jobs:
         if: ${{ env.folder_exists == 'true' }}
         run: |
           echo "DB_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
-  
-      
+
+
   Deploy:
     needs: build 
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Clone Deployment Repository
-        uses: actions/checkout@v3
-        with:
-          repository: Harish-test-12/DIGIT-DevOps-1
-          fetch-depth: 0
-
-      - name: Install SOPS
+      - name: Debug Docker Image and DB Image
         run: |
-          echo "Checking if SOPS is installed..."
-          if ! command -v sops &> /dev/null; then
-            echo "SOPS not found. Installing..."
-            SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
-            curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/v${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION}_amd64.deb"
-            sudo apt --fix-broken install ./sops.deb
-            sudo apt-get update
-            sudo apt-get install sops
-          else
-            echo "SOPS is already installed, skipping installation."
-          fi
+          echo "DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}"
+          echo "DB_IMAGE: ${{ env.DB_IMAGE }}"
 
-      - name: Checkout Branch for Environment File and Helm Charts
-        run: |
-          # Checkout the unified-env-lts branch
-          git checkout unified-env-lts
-          
-          # Define the path to the environment file
-          ENV_FILE_PATH="./deploy-as-code/helm/environments/unified-dev.yaml"
-          
-          # Check if the environment file exists
-          if [ ! -f "$ENV_FILE_PATH" ]; then
-            echo "Error: The specified environment file $ENV_FILE_PATH does not exist"
-            exit 1
-          fi
-          
-          echo "Using environment file: $ENV_FILE_PATH"
-          
-          # Extract domain name under the global section using yq
-          DOMAIN_NAME=$(yq e '.global.domain' $ENV_FILE_PATH)
-          
-          # Check if the domain name exists in the environment file
-          if [ -z "$DOMAIN_NAME" ]; then
-            echo "Error: Domain name not found in the environment file"
-            exit 1
-          fi
-          
-          echo "Domain Name: $DOMAIN_NAME"
-          
-          # Set the domain name as an environment variable
-          echo "DOMAIN_NAME=$DOMAIN_NAME" >> $GITHUB_ENV
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v3
 
-      - name: Install or Update AWS CLI
-        run: |
-          if aws --version &>/dev/null; then
-            echo "AWS CLI is already installed. Skipping installation."
-          else
-            echo "AWS CLI not found. Installing..."
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install
-          fi
-          aws --version
+  #     - name: Clone Deployment Repository
+  #       uses: actions/checkout@v3
+  #       with:
+  #         repository: Harish-test-12/DIGIT-DevOps-1
+  #         fetch-depth: 0
 
-      - name: Generate kubeconfig for EKS
-        run: |
-          # Set AWS credentials using GitHub secrets
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region ${{ secrets.AWS_REGION }}
-          
-          # Specify the EKS cluster name (you can set this as a secret or environment variable)
-          CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
+  #     - name: Install SOPS
+  #       run: |
+  #         echo "Checking if SOPS is installed..."
+  #         if ! command -v sops &> /dev/null; then
+  #           echo "SOPS not found. Installing..."
+  #           SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
+  #           curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/v${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION}_amd64.deb"
+  #           sudo apt --fix-broken install ./sops.deb
+  #           sudo apt-get update
+  #           sudo apt-get install sops
+  #         else
+  #           echo "SOPS is already installed, skipping installation."
+  #         fi
 
-          # Generate the kubeconfig for the EKS cluster
-          echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
+  #     - name: Checkout Branch for Environment File and Helm Charts
+  #       run: |
+  #         # Checkout the unified-env-lts branch
+  #         git checkout unified-env-lts
           
-          # Update kubeconfig using AWS CLI
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
+  #         # Define the path to the environment file
+  #         ENV_FILE_PATH="./deploy-as-code/helm/environments/unified-dev.yaml"
           
-          # View the generated kubeconfig to confirm
-          kubectl config view
+  #         # Check if the environment file exists
+  #         if [ ! -f "$ENV_FILE_PATH" ]; then
+  #           echo "Error: The specified environment file $ENV_FILE_PATH does not exist"
+  #           exit 1
+  #         fi
+          
+  #         echo "Using environment file: $ENV_FILE_PATH"
+          
+  #         # Extract domain name under the global section using yq
+  #         DOMAIN_NAME=$(yq e '.global.domain' $ENV_FILE_PATH)
+          
+  #         # Check if the domain name exists in the environment file
+  #         if [ -z "$DOMAIN_NAME" ]; then
+  #           echo "Error: Domain name not found in the environment file"
+  #           exit 1
+  #         fi
+          
+  #         echo "Domain Name: $DOMAIN_NAME"
+          
+  #         # Set the domain name as an environment variable
+  #         echo "DOMAIN_NAME=$DOMAIN_NAME" >> $GITHUB_ENV
+
+  #     - name: Install or Update AWS CLI
+  #       run: |
+  #         if aws --version &>/dev/null; then
+  #           echo "AWS CLI is already installed. Skipping installation."
+  #         else
+  #           echo "AWS CLI not found. Installing..."
+  #           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  #           unzip awscliv2.zip
+  #           sudo ./aws/install
+  #         fi
+  #         aws --version
+
+  #     - name: Generate kubeconfig for EKS
+  #       run: |
+  #         # Set AWS credentials using GitHub secrets
+  #         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws configure set region ${{ secrets.AWS_REGION }}
+          
+  #         # Specify the EKS cluster name (you can set this as a secret or environment variable)
+  #         CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
+
+  #         # Generate the kubeconfig for the EKS cluster
+  #         echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
+          
+  #         # Update kubeconfig using AWS CLI
+  #         aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
+          
+  #         # View the generated kubeconfig to confirm
+  #         kubectl config view
   
-      # Step 6: Verify Cluster Login
-      - name: Verify Cluster Login
-        run: |
-          echo "Attempting to log in to Kubernetes cluster"
-          kubectl get nodes
+  #     # Step 6: Verify Cluster Login
+  #     - name: Verify Cluster Login
+  #       run: |
+  #         echo "Attempting to log in to Kubernetes cluster"
+  #         kubectl get nodes
 
-      - name: Deploy Service
-        run: |
-          # Authenticate with Docker registry
-          echo "Logging into Docker registry..."
-          echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      # - name: Deploy Service
+      #   run: |
+      #     # Authenticate with Docker registry
+      #     echo "Logging into Docker registry..."
+      #     echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
-          echo "Application Image: ${{ env.DOCKER_IMAGE }}"
-          echo "Database Image: ${{ env.DB_IMAGE }}"
-          
-          # Assign them to local variables if needed
-          DOCKER_IMAGE="${{ env.DOCKER_IMAGE }}"
-          DB_IMAGE="${{ env.DB_IMAGE }}"
+      #     # Assign them to local variables if needed
+      #     DOCKER_IMAGE="${{ env.DOCKER_IMAGE }}"
+      #     DB_IMAGE="${{ env.DB_IMAGE }}"
 
-          # Input: Docker image name
-          # DOCKER_IMAGE=$DOCKER_IMAGE
+      #     # Input: Docker image name
+      #     # DOCKER_IMAGE=$DOCKER_IMAGE
           
-          # Extract service name from the Docker image
-          # SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
+      #     # Extract service name from the Docker image
+      #     # SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
           
-          # Define the DB Docker image by appending '-db' to the service name
-          # DB_IMAGE="${SERVICE_NAME}-db:${DOCKER_IMAGE##*:}"
+      #     # Define the DB Docker image by appending '-db' to the service name
+      #     # DB_IMAGE="${SERVICE_NAME}-db:${DOCKER_IMAGE##*:}"
           
-          echo "Application Image: $DOCKER_IMAGE"
-          echo "Database Image: $DB_IMAGE"
-          # Check if the DB image exists in the Docker repository
-          echo "Checking if the database image exists..."
-          if docker pull harish7303/"$DB_IMAGE" &>/dev/null; then
-            echo "Database image found: $DB_IMAGE"
-            DB_EXISTS=true
-          else
-            echo "Database image not found. Only deploying the application container."
-            DB_EXISTS=false
-          fi
+      #     echo "Application Image: $DOCKER_IMAGE"
+      #     echo "Database Image: $DB_IMAGE"
+      #     # Check if the DB image exists in the Docker repository
+      #     echo "Checking if the database image exists..."
+      #     if docker pull harish7303/"$DB_IMAGE" &>/dev/null; then
+      #       echo "Database image found: $DB_IMAGE"
+      #       DB_EXISTS=true
+      #     else
+      #       echo "Database image not found. Only deploying the application container."
+      #       DB_EXISTS=false
+      #     fi
           
-          # Define the base charts directory
-          CHARTS_DIR="./deploy-as-code/helm/charts"
+      #     # Define the base charts directory
+      #     CHARTS_DIR="./deploy-as-code/helm/charts"
           
-          # Search for the chart directory containing the service name
-          CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
+      #     # Search for the chart directory containing the service name
+      #     CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
           
-          if [ -z "$CHART_DIR" ]; then
-              echo "Error: No Helm chart found for service '$SERVICE_NAME' in $CHARTS_DIR."
-              exit 1
-          fi
+      #     if [ -z "$CHART_DIR" ]; then
+      #         echo "Error: No Helm chart found for service '$SERVICE_NAME' in $CHARTS_DIR."
+      #         exit 1
+      #     fi
           
-          echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
+      #     echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
           
-          # Step 1: Build Helm chart dependencies (resolve local charts)
-          echo "Building Helm chart dependencies..."
-          helm dependency build "$CHART_DIR"
+      #     # Step 1: Build Helm chart dependencies (resolve local charts)
+      #     echo "Building Helm chart dependencies..."
+      #     helm dependency build "$CHART_DIR"
           
-          # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
-          NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
-          echo "Using namespace: $NAMESPACE"
+      #     # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
+      #     NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
+      #     echo "Using namespace: $NAMESPACE"
           
-          # Step 3: Deploy using Helm
-          echo "Deploying service using Helm..."
+      #     # Step 3: Deploy using Helm
+      #     echo "Deploying service using Helm..."
           
-          if [ "$DB_EXISTS" = true ]; then
-            echo "Deploying application and database containers..."
-            helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-              --namespace "$NAMESPACE" \
-              -f "$CHART_DIR/values.yaml" \
-              --set image.tag="${DOCKER_IMAGE##*:}" \
-              --set initContainers.dbMigration.image.tag="${DB_IMAGE##*:}" \
-              --set global.domain="$DOMAIN_NAME" \
-              --set db.image.repository="$SERVICE_NAME-db"  # Explicitly set the db image repository
-          else
-            echo "Deploying only the application container..."
-            helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-              --namespace "$NAMESPACE" \
-              -f "$CHART_DIR/values.yaml" \
-              --set image.tag="${DOCKER_IMAGE##*:}" \
-              --set global.domain="$DOMAIN_NAME"
-          fi
-        shell: /usr/bin/bash -e {0}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
+      #     if [ "$DB_EXISTS" = true ]; then
+      #       echo "Deploying application and database containers..."
+      #       helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+      #         --namespace "$NAMESPACE" \
+      #         -f "$CHART_DIR/values.yaml" \
+      #         --set image.tag="${DOCKER_IMAGE##*:}" \
+      #         --set initContainers.dbMigration.image.tag="${DB_IMAGE##*:}" \
+      #         --set global.domain="$DOMAIN_NAME" \
+      #         --set db.image.repository="$SERVICE_NAME-db"  # Explicitly set the db image repository
+      #     else
+      #       echo "Deploying only the application container..."
+      #       helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+      #         --namespace "$NAMESPACE" \
+      #         -f "$CHART_DIR/values.yaml" \
+      #         --set image.tag="${DOCKER_IMAGE##*:}" \
+      #         --set global.domain="$DOMAIN_NAME"
+      #     fi
+      #   shell: /usr/bin/bash -e {0}
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
