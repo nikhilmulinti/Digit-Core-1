@@ -149,13 +149,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
       
-      # - name: Display Image details
-      #   run: >
-      #     echo "${{ secrets.DOCKER_USERNAME }}/${{
-      #     github.event.inputs.serviceName }}:${{ steps.tag.outputs.tag }}"
-
-      #     echo "${{ secrets.DOCKER_USERNAME }}/${{
-      #     github.event.inputs.serviceName }}-db:${{ steps.tag.outputs.tag }}"
   Deploy:
     needs: build 
     runs-on: ubuntu-latest
@@ -182,3 +175,33 @@ jobs:
           else
             echo "SOPS is already installed, skipping installation."
           fi
+
+      - name: Checkout Branch for Environment File and Helm Charts
+        run: |
+          # Checkout the unified-env-lts branch
+          git checkout unified-env-lts
+          
+          # Define the path to the environment file
+          ENV_FILE_PATH="./deploy-as-code/helm/environments/unified-dev.yaml"
+          
+          # Check if the environment file exists
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "Error: The specified environment file $ENV_FILE_PATH does not exist"
+            exit 1
+          fi
+          
+          echo "Using environment file: $ENV_FILE_PATH"
+          
+          # Extract domain name under the global section using yq
+          DOMAIN_NAME=$(yq e '.global.domain' $ENV_FILE_PATH)
+          
+          # Check if the domain name exists in the environment file
+          if [ -z "$DOMAIN_NAME" ]; then
+            echo "Error: Domain name not found in the environment file"
+            exit 1
+          fi
+          
+          echo "Domain Name: $DOMAIN_NAME"
+          
+          # Set the domain name as an environment variable
+          echo "DOMAIN_NAME=$DOMAIN_NAME" >> $GITHUB_ENV
