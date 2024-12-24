@@ -218,18 +218,25 @@ jobs:
           fi
           aws --version
 
-      - name: Configure AWS CLI
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set aws_secret_rigion $AWS_REGION
-
       - name: Generate kubeconfig for EKS
         run: |
-          CLUSTER_NAME="unified-dev"
+          # Set AWS credentials using GitHub secrets
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+          
+          # Specify the EKS cluster name (you can set this as a secret or environment variable)
+          CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
+
+          # Generate the kubeconfig for the EKS cluster
           echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
+          
+          # Update kubeconfig using AWS CLI
           aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
+          
+          # View the generated kubeconfig to confirm
           kubectl config view
+  
       # Step 6: Verify Cluster Login
       - name: Verify Cluster Login
         run: |
