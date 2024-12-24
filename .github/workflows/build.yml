@@ -139,9 +139,11 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
-      
-      - name: Set Docker Image Variable
-        run: echo "DOCKER_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
+
+      - name: Save DB_IMAGE to GITHUB_ENV
+        if: ${{ env.folder_exists == 'true' }}
+        run: |
+          echo "DOCKER_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
       
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
@@ -153,10 +155,12 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
-      
-      - name: Set Database Docker Image Variable
+
+      - name: Save DB_IMAGE to GITHUB_ENV
         if: ${{ env.folder_exists == 'true' }}
-        run: echo "DB_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
+        run: |
+          echo "DB_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
+  
       
   Deploy:
     needs: build 
@@ -258,14 +262,21 @@ jobs:
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
+          echo "Application Image: ${{ env.DOCKER_IMAGE }}"
+          echo "Database Image: ${{ env.DB_IMAGE }}"
+          
+          # Assign them to local variables if needed
+          DOCKER_IMAGE="${{ env.DOCKER_IMAGE }}"
+          DB_IMAGE="${{ env.DB_IMAGE }}"
+
           # Input: Docker image name
-          DOCKER_IMAGE=$DOCKER_IMAGE
+          # DOCKER_IMAGE=$DOCKER_IMAGE
           
           # Extract service name from the Docker image
-          SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
+          # SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
           
           # Define the DB Docker image by appending '-db' to the service name
-          DB_IMAGE="${SERVICE_NAME}-db:${DOCKER_IMAGE##*:}"
+          # DB_IMAGE="${SERVICE_NAME}-db:${DOCKER_IMAGE##*:}"
           
           echo "Application Image: $DOCKER_IMAGE"
           echo "Database Image: $DB_IMAGE"
@@ -324,4 +335,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOCKER_IMAGE: ${{ github.event.inputs.docker_image }}
+          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
