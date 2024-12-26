@@ -130,12 +130,12 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
-
+    
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
-          echo "docker-image: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-
+          echo "::set-output name=docker-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+  
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
@@ -145,7 +145,7 @@ jobs:
           else
             echo "folder_exists=false" >> $GITHUB_ENV
           fi
-
+  
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: build_push_db_docker
@@ -156,13 +156,13 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
-
+  
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
-          echo "db-image: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-
+          echo "::set-output name=db-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+    
   Deploy:
     needs: build
     runs-on: ubuntu-latest
