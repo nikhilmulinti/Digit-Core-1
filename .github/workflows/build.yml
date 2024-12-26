@@ -310,18 +310,17 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-          # Output the Docker Image
-          DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
-          echo "Docker Image: $DOCKER_IMAGE"
           
-          # Check if db-image.txt exists before trying to read it
-          if [ -f ./artifacts/db-image.txt ]; then
-            DB_IMAGE=$(cat ./artifacts/db-image.txt)
-            echo "DB Image: $DB_IMAGE"
+          echo "Application Image: $DOCKER_IMAGE"
+          echo "Database Image: $DB_IMAGE"
+          
+          # Check if the DB image exists in the Docker repository
+          echo "Checking if the database image exists..."
+          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
+            echo "Database image found: $DB_IMAGE"
             DB_EXISTS=true
           else
-            echo "No database image file found. Skipping DB deployment."
+            echo "Database image not found or not specified. Skipping DB deployment."
             DB_EXISTS=false
           fi
           
@@ -349,7 +348,7 @@ jobs:
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
           
-          # Step 3: Deploy the application container using Helm
+          # Step 3: Deploy using Helm
           echo "Deploying service using Helm..."
           
           # Deploy the application container
@@ -377,4 +376,4 @@ jobs:
           DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
           DOCKER_IMAGE: ${{ steps.debug.outputs.DOCKER_IMAGE }}
           DB_IMAGE: ${{ steps.debug.outputs.DB_IMAGE }}
-        
+      
