@@ -55,9 +55,9 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
-    outputs:
-      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+    # outputs:
+    #   docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+    #   db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -157,8 +157,9 @@ jobs:
         id: save-docker-image
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
-          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          echo "$DOCKER_IMAGE" > docker-image.txt
+          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
+          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           
           
       - name: Save Database Docker Image
@@ -166,8 +167,17 @@ jobs:
         id: save-db-image
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
-          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+          echo "$DB_IMAGE" > db-image.txt
+          # echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
+          # echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-images
+          path: |
+            docker-image.txt
+            db-image.txt
 
       - name: Debug Outputs
         run: |
@@ -181,11 +191,18 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-images
+          path: ./artifacts
+
       - name: Debug Docker Image Outputs
         run: |
-          echo "Docker Image: ${{ needs.build.outputs.docker-image }}"
-          echo "DB Image: ${{ needs.build.outputs.db-image }}"
-          
+          DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
+          DB_IMAGE=$(cat ./artifacts/db-image.txt)
+          echo "Docker Image: $DOCKER_IMAGE"
+          echo "DB Image: $DB_IMAGE"
       #     # Verify if Docker images are accessible
       #     docker pull ${{ needs.build.outputs.docker-image }} || { echo "Docker image not found!"; exit 1; }
       #     docker pull ${{ needs.build.outputs.db-image }} || { echo "DB image not found!"; exit 1; }
