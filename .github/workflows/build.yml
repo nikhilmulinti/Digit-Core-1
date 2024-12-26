@@ -297,13 +297,13 @@ jobs:
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
-          # Assign them to local variables if needed
-          DOCKER_IMAGE="${{ env.DOCKER_IMAGE }}"
-          DB_IMAGE="${{ env.DB_IMAGE }}"
-      
+          # Read Docker images from the text files
+          DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
+          DB_IMAGE=$(cat ./artifacts/db-image.txt)
+          
           echo "Application Image: $DOCKER_IMAGE"
           echo "Database Image: $DB_IMAGE"
-      
+          
           # Check if the DB image exists in the Docker repository
           echo "Checking if the database image exists..."
           if docker pull "$DB_IMAGE" &>/dev/null; then
@@ -313,13 +313,13 @@ jobs:
             echo "Database image not found. Skipping DB deployment."
             DB_EXISTS=false
           fi
-      
+          
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
           
           # Extract service name from the Docker image (adjust if needed)
           SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
-      
+          
           # Search for the chart directory containing the service name
           CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
           
@@ -340,7 +340,7 @@ jobs:
           
           # Step 3: Deploy using Helm
           echo "Deploying service using Helm..."
-      
+          
           # Deploy the application container
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
@@ -363,6 +363,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
-          DB_IMAGE: ${{ env.DB_IMAGE }}
-      
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}    
