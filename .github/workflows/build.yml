@@ -61,7 +61,7 @@ jobs:
 
     outputs:
       docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+      # db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
 
     steps:
       - name: Checkout Code
@@ -175,21 +175,17 @@ jobs:
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
           # echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
 
-  Deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      # - name: Checkout Code
-      #   uses: actions/checkout@v3
+  # Deploy:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # - name: Checkout Code
+  #     #   uses: actions/checkout@v3
 
       - name: Debug Docker Image Outputs
         run: |
           echo "Docker Image: ${{ needs.build.outputs.docker-image }}"
           # echo "DB Image: ${{ needs.build.outputs.db-image }}"
-      # - name: Verify Docker Images
-      #   run: |
-      #     echo "Verifying Docker Image: ${{ needs.build.outputs.docker-image }}"
-      #     echo "Verifying DB Image: ${{ needs.build.outputs.db-image }}"
           
       #     # Verify if Docker images are accessible
       #     docker pull ${{ needs.build.outputs.docker-image }} || { echo "Docker image not found!"; exit 1; }
