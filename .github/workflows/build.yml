@@ -130,13 +130,15 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
-    
+
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
-          echo "docker-image=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
-          echo "docker-image=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-  
+          docker_image="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker-image=$docker_image" >> $GITHUB_ENV
+          echo "::set-output name=docker-image::$docker_image"
+          echo "docker-image=$docker_image"
+          
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
@@ -169,14 +171,15 @@ jobs:
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
           echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
-  Deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Debug Docker Image and DB Image
-        run: |
-          echo "DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}"
-          echo "DB_IMAGE: ${{ needs.build.outputs.db-image }}"
+
+  # Deploy:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Debug Docker Image and DB Image
+  #       run: |
+  #         echo "DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}"
+  #         echo "DB_IMAGE: ${{ needs.build.outputs.db-image }}"
 
 
   #     - name: Checkout Repository
