@@ -56,8 +56,8 @@ jobs:
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     outputs:
-      docker-image: ${{ steps.new.outputs.docker-image }}
-      db-image: ${{ steps.new.outputs.db-image || '' }}
+      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
