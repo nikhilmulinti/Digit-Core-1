@@ -294,12 +294,8 @@ jobs:
       - name: Deploy Service
         run: |
           # Authenticate with Docker registry
-          echo "Logging into Docker registry..."
-          echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          
-          # Read Docker images from the text files
-          DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
-          DB_IMAGE=$(cat ./artifacts/db-image.txt)
+          # echo "Logging into Docker registry..."
+          # echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
           echo "Application Image: $DOCKER_IMAGE"
           echo "Database Image: $DB_IMAGE"
@@ -363,4 +359,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}    
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+          DOCKER_IMAGE: ${{ steps.debug.outputs.DOCKER_IMAGE }}
+          DB_IMAGE: ${{ steps.debug.outputs.DB_IMAGE }}
+        
