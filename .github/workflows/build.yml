@@ -212,6 +212,7 @@ jobs:
           path: ./artifacts
 
       - name: Debug Docker Image Outputs
+        id: debug
         run: |
           DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
           DB_IMAGE=$(cat ./artifacts/db-image.txt)
@@ -311,9 +312,15 @@ jobs:
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
-          echo "Application Image: $DOCKER_IMAGE"
-          echo "Database Image: $DB_IMAGE"
+          # Debug: Check if DOCKER_IMAGE and DB_IMAGE are set
+          echo "DOCKER_IMAGE: $DOCKER_IMAGE"
+          echo "DB_IMAGE: $DB_IMAGE"
           
+          # If DOCKER_IMAGE is empty, exit the step
+          if [ -z "$DOCKER_IMAGE" ]; then
+            echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
+            exit 1
+          fi
           # Check if the DB image exists in the Docker repository
           echo "Checking if the database image exists..."
           if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
@@ -323,7 +330,7 @@ jobs:
             echo "Database image not found or not specified. Skipping DB deployment."
             DB_EXISTS=false
           fi
-          
+      
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
           
@@ -371,9 +378,9 @@ jobs:
           fi
         shell: /usr/bin/bash -e {0}
         env:
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
           DOCKER_IMAGE: ${{ steps.debug.outputs.DOCKER_IMAGE }}
           DB_IMAGE: ${{ steps.debug.outputs.DB_IMAGE }}
       
