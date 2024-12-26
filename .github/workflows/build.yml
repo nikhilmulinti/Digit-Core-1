@@ -164,10 +164,10 @@ jobs:
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
-          echo "db-image=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
-          echo "::set-output name=db-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "::set-output name=db-image::$db_image"
-          echo "db-image=$db_image"
+          IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db-image=$IMAGE" >> $GITHUB_ENV
+          echo "::set-output name=db-image::$IMAGE"
+          
       - name: Debug Outputs
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
