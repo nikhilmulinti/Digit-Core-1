@@ -55,13 +55,12 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
-
     outputs:
       docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
       # db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
 
     steps:
       - name: Checkout Code
