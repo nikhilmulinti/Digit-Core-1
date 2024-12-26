@@ -203,102 +203,93 @@ jobs:
           DB_IMAGE=$(cat ./artifacts/db-image.txt)
           echo "Docker Image: $DOCKER_IMAGE"
           echo "DB Image: $DB_IMAGE"
-      #     # Verify if Docker images are accessible
-      #     docker pull ${{ needs.build.outputs.docker-image }} || { echo "Docker image not found!"; exit 1; }
-      #     docker pull ${{ needs.build.outputs.db-image }} || { echo "DB image not found!"; exit 1; }
-          
-      #     echo "Both Docker images are accessible."
 
+      - name: Clone Deployment Repository
+        uses: actions/checkout@v3
+        with:
+          repository: Harish-test-12/DIGIT-DevOps-1
+          fetch-depth: 0
 
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v3
+      - name: Install SOPS
+        run: |
+          echo "Checking if SOPS is installed..."
+          if ! command -v sops &> /dev/null; then
+            echo "SOPS not found. Installing..."
+            SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
+            curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/v${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION}_amd64.deb"
+            sudo apt --fix-broken install ./sops.deb
+            sudo apt-get update
+            sudo apt-get install sops
+          else
+            echo "SOPS is already installed, skipping installation."
+          fi
 
-  #     - name: Clone Deployment Repository
-  #       uses: actions/checkout@v3
-  #       with:
-  #         repository: Harish-test-12/DIGIT-DevOps-1
-  #         fetch-depth: 0
+      - name: Checkout Branch for Environment File and Helm Charts
+        run: |
+          # Checkout the unified-env-lts branch
+          git checkout unified-env-lts
+          
+          # Define the path to the environment file
+          ENV_FILE_PATH="./deploy-as-code/helm/environments/unified-dev.yaml"
+          
+          # Check if the environment file exists
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "Error: The specified environment file $ENV_FILE_PATH does not exist"
+            exit 1
+          fi
+          
+          echo "Using environment file: $ENV_FILE_PATH"
+          
+          # Extract domain name under the global section using yq
+          DOMAIN_NAME=$(yq e '.global.domain' $ENV_FILE_PATH)
+          
+          # Check if the domain name exists in the environment file
+          if [ -z "$DOMAIN_NAME" ]; then
+            echo "Error: Domain name not found in the environment file"
+            exit 1
+          fi
+          
+          echo "Domain Name: $DOMAIN_NAME"
+          
+          # Set the domain name as an environment variable
+          echo "DOMAIN_NAME=$DOMAIN_NAME" >> $GITHUB_ENV
 
-  #     - name: Install SOPS
-  #       run: |
-  #         echo "Checking if SOPS is installed..."
-  #         if ! command -v sops &> /dev/null; then
-  #           echo "SOPS not found. Installing..."
-  #           SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
-  #           curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/v${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION}_amd64.deb"
-  #           sudo apt --fix-broken install ./sops.deb
-  #           sudo apt-get update
-  #           sudo apt-get install sops
-  #         else
-  #           echo "SOPS is already installed, skipping installation."
-  #         fi
+      - name: Install or Update AWS CLI
+        run: |
+          if aws --version &>/dev/null; then
+            echo "AWS CLI is already installed. Skipping installation."
+          else
+            echo "AWS CLI not found. Installing..."
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+          fi
+          aws --version
 
-  #     - name: Checkout Branch for Environment File and Helm Charts
-  #       run: |
-  #         # Checkout the unified-env-lts branch
-  #         git checkout unified-env-lts
+      - name: Generate kubeconfig for EKS
+        run: |
+          # Set AWS credentials using GitHub secrets
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
           
-  #         # Define the path to the environment file
-  #         ENV_FILE_PATH="./deploy-as-code/helm/environments/unified-dev.yaml"
-          
-  #         # Check if the environment file exists
-  #         if [ ! -f "$ENV_FILE_PATH" ]; then
-  #           echo "Error: The specified environment file $ENV_FILE_PATH does not exist"
-  #           exit 1
-  #         fi
-          
-  #         echo "Using environment file: $ENV_FILE_PATH"
-          
-  #         # Extract domain name under the global section using yq
-  #         DOMAIN_NAME=$(yq e '.global.domain' $ENV_FILE_PATH)
-          
-  #         # Check if the domain name exists in the environment file
-  #         if [ -z "$DOMAIN_NAME" ]; then
-  #           echo "Error: Domain name not found in the environment file"
-  #           exit 1
-  #         fi
-          
-  #         echo "Domain Name: $DOMAIN_NAME"
-          
-  #         # Set the domain name as an environment variable
-  #         echo "DOMAIN_NAME=$DOMAIN_NAME" >> $GITHUB_ENV
+          # Specify the EKS cluster name (you can set this as a secret or environment variable)
+          CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
 
-  #     - name: Install or Update AWS CLI
-  #       run: |
-  #         if aws --version &>/dev/null; then
-  #           echo "AWS CLI is already installed. Skipping installation."
-  #         else
-  #           echo "AWS CLI not found. Installing..."
-  #           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-  #           unzip awscliv2.zip
-  #           sudo ./aws/install
-  #         fi
-  #         aws --version
-
-  #     - name: Generate kubeconfig for EKS
-  #       run: |
-  #         # Set AWS credentials using GitHub secrets
-  #         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws configure set region ${{ secrets.AWS_REGION }}
+          # Generate the kubeconfig for the EKS cluster
+          echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
           
-  #         # Specify the EKS cluster name (you can set this as a secret or environment variable)
-  #         CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
-
-  #         # Generate the kubeconfig for the EKS cluster
-  #         echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
+          # Update kubeconfig using AWS CLI
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
           
-  #         # Update kubeconfig using AWS CLI
-  #         aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
-          
-  #         # View the generated kubeconfig to confirm
-  #         kubectl config view
+          # View the generated kubeconfig to confirm
+          kubectl config view
   
-  #     # Step 6: Verify Cluster Login
-  #     - name: Verify Cluster Login
-  #       run: |
-  #         echo "Attempting to log in to Kubernetes cluster"
-  #         kubectl get nodes
+      # Step 6: Verify Cluster Login
+      - name: Verify Cluster Login
+        run: |
+          echo "Attempting to log in to Kubernetes cluster"
+          kubectl get nodes
 
       # - name: Deploy Service
       #   run: |
