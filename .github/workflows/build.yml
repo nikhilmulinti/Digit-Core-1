@@ -158,8 +158,8 @@ jobs:
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
           echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
-          echo "::set-output name=docker-image::$DOCKER_IMAGE"
-          # echo "docker-image=$DOCKER_IMAGE"
+          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          
           
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
@@ -167,13 +167,13 @@ jobs:
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
-          echo "::set-output name=db-image::$DB_IMAGE"
-          
+          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+
       - name: Debug Outputs
-        id: new
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
           echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
+        
   Deploy:
     needs: build
     runs-on: ubuntu-latest
