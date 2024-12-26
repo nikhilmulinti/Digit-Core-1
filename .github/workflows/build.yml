@@ -166,20 +166,30 @@ jobs:
         run: |
           echo "db-image=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
           echo "::set-output name=db-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-    
+          echo "::set-output name=db-image::$db_image"
+          echo "db-image=$db_image"
       - name: Debug Outputs
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
           echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
 
-  # Deploy:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Debug Docker Image and DB Image
-  #       run: |
-  #         echo "DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}"
-  #         echo "DB_IMAGE: ${{ needs.build.outputs.db-image }}"
+  Deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Verify Docker Images
+        run: |
+          echo "Verifying Docker Image: ${{ needs.build.outputs.docker-image }}"
+          echo "Verifying DB Image: ${{ needs.build.outputs.db-image }}"
+          
+          # Verify if Docker images are accessible
+          docker pull ${{ needs.build.outputs.docker-image }} || { echo "Docker image not found!"; exit 1; }
+          docker pull ${{ needs.build.outputs.db-image }} || { echo "DB image not found!"; exit 1; }
+          
+          echo "Both Docker images are accessible."
 
 
   #     - name: Checkout Repository
