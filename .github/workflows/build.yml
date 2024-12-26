@@ -134,21 +134,20 @@ jobs:
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
-          echo "::set-output name=docker-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker-image=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
 
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
           FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
           if [ -d "$FOLDER_PATH" ]; then
-            echo "true"
+            echo "folder_exists=true" >> $GITHUB_ENV
           else
-            echo "false"
+            echo "folder_exists=false" >> $GITHUB_ENV
           fi
-        continue-on-error: true
 
       - name: Build and Push Database Docker Image
-        if: ${{ steps.check-db-folder.outputs.result == 'true' }}
+        if: ${{ env.folder_exists == 'true' }}
         id: build_push_db_docker
         uses: docker/build-push-action@v5
         with:
@@ -159,11 +158,10 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
       - name: Save Database Docker Image
-        if: ${{ steps.check-db-folder.outputs.result == 'true' }}
+        if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
-          echo "::set-output name=db-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-
+          echo "db-image=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
 
   Deploy:
     needs: build
@@ -173,6 +171,7 @@ jobs:
         run: |
           echo "DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}"
           echo "DB_IMAGE: ${{ needs.build.outputs.db-image }}"
+
 
   #     - name: Checkout Repository
   #       uses: actions/checkout@v3
