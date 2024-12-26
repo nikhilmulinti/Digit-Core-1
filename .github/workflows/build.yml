@@ -56,13 +56,11 @@ jobs:
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     outputs:
-      Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}
-      # docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-      # db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -141,51 +139,51 @@ jobs:
           # echo "::set-output name=docker-image::$docker_image"
           # echo "docker-image=$docker_image"
           
-      # - name: Check if DB folder exists
-      #   id: check-db-folder
-      #   run: |
-      #     FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
-      #     if [ -d "$FOLDER_PATH" ]; then
-      #       echo "folder_exists=true" >> $GITHUB_ENV
-      #     else
-      #       echo "folder_exists=false" >> $GITHUB_ENV
-      #     fi
+      - name: Check if DB folder exists
+        id: check-db-folder
+        run: |
+          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
+          if [ -d "$FOLDER_PATH" ]; then
+            echo "folder_exists=true" >> $GITHUB_ENV
+          else
+            echo "folder_exists=false" >> $GITHUB_ENV
+          fi
   
-      # - name: Build and Push Database Docker Image
-      #   if: ${{ env.folder_exists == 'true' }}
-      #   id: build_push_db_docker
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: core-services/${{ matrix.service }}/src/main/resources/db
-      #     file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
-      #     push: true
-      #     tags: |
-      #       ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+      - name: Build and Push Database Docker Image
+        if: ${{ env.folder_exists == 'true' }}
+        id: build_push_db_docker
+        uses: docker/build-push-action@v5
+        with:
+          context: core-services/${{ matrix.service }}/src/main/resources/db
+          file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
   
-      # - name: Save Database Docker Image
-      #   if: ${{ env.folder_exists == 'true' }}
-      #   id: save-db-image
-      #   run: |
-      #     IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-      #     echo "db-image=$IMAGE" >> $GITHUB_ENV
-      #     echo "::set-output name=db-image::$IMAGE"
+      - name: Save Database Docker Image
+        if: ${{ env.folder_exists == 'true' }}
+        id: save-db-image
+        run: |
+          IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db-image=$IMAGE" >> $GITHUB_ENV
+          echo "::set-output name=db-image::$IMAGE"
           
       - name: Debug Outputs
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
-          # echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
+          echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
 
   Deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      # - name: Checkout Code
-      #   uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Debug Docker Image Outputs
         run: |
           echo "Docker Image: ${{ needs.build.outputs.docker-image }}"
-          # echo "DB Image: ${{ needs.build.outputs.db-image }}"
+          echo "DB Image: ${{ needs.build.outputs.db-image }}"
           
       #     # Verify if Docker images are accessible
       #     docker pull ${{ needs.build.outputs.docker-image }} || { echo "Docker image not found!"; exit 1; }
