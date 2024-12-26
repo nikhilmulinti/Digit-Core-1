@@ -134,7 +134,7 @@ jobs:
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
-          echo "::set-output name=docker-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker-image: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
 
       - name: Check if DB folder exists
         id: check-db-folder
@@ -161,7 +161,7 @@ jobs:
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
-          echo "::set-output name=db-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db-image: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
 
   Deploy:
     needs: build
