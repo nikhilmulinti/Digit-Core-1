@@ -131,13 +131,6 @@ jobs:
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
 
-      - name: Save Application Docker Image
-        id: save-docker-image
-        run: |
-          echo "::set-output name=docker-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          # echo "docker-image=$docker_image" >> $GITHUB_ENV
-          # echo "::set-output name=docker-image::$docker_image"
-          # echo "docker-image=$docker_image"
           
       - name: Check if DB folder exists
         id: check-db-folder
@@ -159,22 +152,28 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
-  
+
+      - name: Save Application Docker Image
+        id: save-docker-image
+        run: |
+          DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
+          echo "::set-output name=docker-image::$DOCKER_IMAGE"
+          # echo "docker-image=$DOCKER_IMAGE"
+          
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
-          IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db-image=$IMAGE" >> $GITHUB_ENV
-          echo "::set-output name=db-image::$IMAGE"
+          DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
+          echo "::set-output name=db-image::$DB_IMAGE"
           
       - name: Debug Outputs
         id: new
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
           echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
-          echo "docker-image=${{ steps.save-docker-image.outputs.docker-image }}" >> $GITHUB_ENV
-          echo "db-image=${{ steps.save-db-image.outputs.db-image }}" >> $GITHUB_ENV
   Deploy:
     needs: build
     runs-on: ubuntu-latest
