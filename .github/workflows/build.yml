@@ -56,8 +56,8 @@ jobs:
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     outputs:
-      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+      docker-image: ${{ steps.new.outputs.docker-image }}
+      db-image: ${{ steps.new.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -169,10 +169,12 @@ jobs:
           echo "::set-output name=db-image::$IMAGE"
           
       - name: Debug Outputs
+        id: new
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
           echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
-
+          echo "docker-image=${{ steps.save-docker-image.outputs.docker-image }}" >> $GITHUB_ENV
+          echo "db-image=${{ steps.save-db-image.outputs.db-image }}" >> $GITHUB_ENV
   Deploy:
     needs: build
     runs-on: ubuntu-latest
