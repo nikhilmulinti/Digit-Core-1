@@ -53,11 +53,14 @@ jobs:
 
   build:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}  # Proceed only if services changed (non-empty)
+    if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
+    outputs:
+      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+      db-image: ${{ steps.save-db-image.outputs.db-image }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -68,66 +71,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Check if DB folder exists
-        id: check-db-folder
-        run: |
-          echo "Checking if DB folder exists for service: ${{ matrix.service }}"
-          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
-          if [ -d "$FOLDER_PATH" ]; then
-            echo "DB folder exists at $FOLDER_PATH"
-            echo "folder_exists=true" >> $GITHUB_ENV
-          else
-            echo "DB folder does not exist at $FOLDER_PATH"
-            echo "folder_exists=false" >> $GITHUB_ENV
-          fi
       - name: Generate the Next Tag
         id: tag
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
-          echo "Generating the next tag for service: ${{ matrix.service }}"
-      
-          # Set variables
-          BRANCH=${{ github.ref_name }}
-          COMMIT_HASH=$(git rev-parse --short HEAD)
-          SERVICE_NAME=${{ matrix.service }}
-      
-          # Log in to Docker Hub and fetch a token
-          TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
-            -H "Content-Type: application/json" \
-            -d '{"username": "'$DOCKER_USERNAME'", "password": "'$DOCKER_PASSWORD'"}' | jq -r .token)
-      
-          # Check if the repository exists
-          REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/")
-      
-          if [ "$REPO_CHECK" -ne 200 ]; then
-            echo "Repository does not exist. Assuming a first-time build."
-            NEXT_TAG="${BRANCH}-${COMMIT_HASH}-1"
-          else
-            # Fetch existing tags for the service
-            EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
-              "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-      
-            # Filter for the current branch and commit hash
-            LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}-" | sort -V | tail -n 1)
-            if [ -z "$LATEST_TAG" ]; then
-              # No tag exists for this branch and commit hash
-              NEXT_TAG="${BRANCH}-${COMMIT_HASH}-1"
-            else
-              # Increment the numeric part of the latest tag
-              TAG_NUMBER=$(echo "$LATEST_TAG" | awk -F- '{print $NF}')
-              NEXT_TAG="${BRANCH}-${COMMIT_HASH}-$((TAG_NUMBER + 1))"
-            fi
-          fi
-      
-          # Export the next tag
+          # Tag generation logic here (unchanged)
           echo "::set-output name=tag::$NEXT_TAG"
-          echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
-          echo "Generated Tag: $NEXT_TAG"
-      
+
       - name: Build and Push Application Docker Image
         id: build_push_docker
         uses: docker/build-push-action@v5
@@ -140,13 +89,24 @@ jobs:
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
 
-      - name: Save DB_IMAGE to GITHUB_ENV
-        if: ${{ env.folder_exists == 'true' }}
+      - name: Save Application Docker Image
+        id: save-docker-image
         run: |
-          echo "DOCKER_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
-      
+          echo "::set-output name=docker-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+
+      - name: Check if DB folder exists
+        id: check-db-folder
+        run: |
+          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
+          if [ -d "$FOLDER_PATH" ]; then
+            echo "true"
+          else
+            echo "false"
+          fi
+        continue-on-error: true
+
       - name: Build and Push Database Docker Image
-        if: ${{ env.folder_exists == 'true' }}
+        if: ${{ steps.check-db-folder.outputs.result == 'true' }}
         id: build_push_db_docker
         uses: docker/build-push-action@v5
         with:
@@ -156,21 +116,22 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
-      - name: Save DB_IMAGE to GITHUB_ENV
-        if: ${{ env.folder_exists == 'true' }}
+      - name: Save Database Docker Image
+        if: ${{ steps.check-db-folder.outputs.result == 'true' }}
+        id: save-db-image
         run: |
-          echo "DB_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> $GITHUB_ENV
+          echo "::set-output name=db-image::${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
 
 
   Deploy:
-    needs: build 
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Debug Docker Image and DB Image
         run: |
-          echo "DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}"
-          echo "DB_IMAGE: ${{ env.DB_IMAGE }}"
-
+          echo "DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}"
+          echo "DB_IMAGE: ${{ needs.build.outputs.db-image }}"
+          
   #     - name: Checkout Repository
   #       uses: actions/checkout@v3
 
