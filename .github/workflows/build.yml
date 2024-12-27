@@ -55,9 +55,9 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
-    # outputs:
-    #   docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-    #   db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+    outputs:
+      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -157,9 +157,9 @@ jobs:
         id: save-docker-image
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "$DOCKER_IMAGE" > docker-image.txt
-          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
-          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          echo "Docker Image: $DOCKER_IMAGE"
+          # echo "$DOCKER_IMAGE" > docker-image.txt
+          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           
           
       - name: Save Database Docker Image
@@ -167,31 +167,40 @@ jobs:
         id: save-db-image
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "$DB_IMAGE" > db-image.txt
-          # echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
-          # echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+          # echo "$DB_IMAGE" > db-image.txt
+          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
 
-      - name: Set Docker Images in Artifacts
+      - name: Debug Docker Image Outputs
+        id: debug
         run: |
-          # Create the artifacts directory if it doesn't exist
-          mkdir -p ./artifacts
+          DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
+          DB_IMAGE=$(cat ./artifacts/db-image.txt)
+          echo "Docker Image: $DOCKER_IMAGE"
+          echo "DB Image: $DB_IMAGE"
+          echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
+
+      # - name: Set Docker Images in Artifacts
+      #   run: |
+      #     # Create the artifacts directory if it doesn't exist
+      #     mkdir -p ./artifacts
           
-          # Set the Docker image values
-          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
-          echo "$DB_IMAGE" > ./artifacts/db-image.txt
-        shell: /usr/bin/bash -e {0}
-        env:
-          NEXT_TAG: master-e410a69-1
-          folder_exists: false
+      #     # Set the Docker image values
+      #     echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
+      #     echo "$DB_IMAGE" > ./artifacts/db-image.txt
+      #   shell: /usr/bin/bash -e {0}
+      #   env:
+      #     NEXT_TAG: master-e410a69-1
+      #     folder_exists: false
         
         
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: docker-images
-          path: |
-            docker-image.txt
-            db-image.txt
+      # - name: Upload Artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: docker-images
+      #     path: |
+      #       docker-image.txt
+      #       db-image.txt
 
       - name: Debug Outputs
         run: |
@@ -205,11 +214,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-images
-          path: ./artifacts
+      # - name: Download Artifacts
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: docker-images
+      #     path: ./artifacts
 
       - name: Debug Docker Image Outputs
         id: debug
@@ -327,16 +336,17 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          
+      
           # Debug: Check if DOCKER_IMAGE and DB_IMAGE are set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
           echo "DB_IMAGE: $DB_IMAGE"
-          
+      
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
             echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
             exit 1
           fi
+      
           # Check if the DB image exists in the Docker repository
           echo "Checking if the database image exists..."
           if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
@@ -347,52 +357,63 @@ jobs:
             DB_EXISTS=false
           fi
       
-          # Def ine the base charts directory
+          # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
-
-          # Extract service name from the Docker image (everything after the last '/' and before the colon)
+      
+          # Extract the repository and tag for application and database images
+          DOCKER_IMAGE_REPO=$(echo "$DOCKER_IMAGE" | awk -F':' '{print $1}')
+          DOCKER_IMAGE_TAG=$(echo "$DOCKER_IMAGE" | awk -F':' '{print $2}')
           SERVICE_NAME=$(echo "$DOCKER_IMAGE" | awk -F'/' '{print $NF}' | cut -d':' -f1)
-
-          # Debugging: Print the extracted service name
-          echo "Extracted SERVICE_NAME: $SERVICE_NAME"
-
+      
+          DB_IMAGE_REPO=$(echo "$DB_IMAGE" | awk -F':' '{print $1}')
+          DB_IMAGE_TAG=$(echo "$DB_IMAGE" | awk -F':' '{print $2}')
+      
+          # Debugging: Print extracted values
+          echo "DOCKER_IMAGE_REPO: $DOCKER_IMAGE_REPO"
+          echo "DOCKER_IMAGE_TAG: $DOCKER_IMAGE_TAG"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "DB_IMAGE_REPO: $DB_IMAGE_REPO"
+          echo "DB_IMAGE_TAG: $DB_IMAGE_TAG"
+      
           # Recursively search for the chart directory containing the service name and Chart.yaml
           CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
-
+      
           # Check if a matching chart directory was found
           if [ -z "$CHART_DIR" ]; then
             echo "Error: No Helm chart found for service '$SERVICE_NAME' in $CHARTS_DIR."
             exit 1
           fi
-
+      
           echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
-          
+      
           # Step 1: Build Helm chart dependencies (resolve local charts)
           echo "Building Helm chart dependencies..."
           helm dependency build "$CHART_DIR"
-          
+      
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
-          
+      
           # Step 3: Deploy using Helm
           echo "Deploying service using Helm..."
-          
+      
           # Deploy the application container
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
-            --set image.tag="${DOCKER_IMAGE##*:}" \
+            --set image.repository="$DOCKER_IMAGE_REPO" \
+            --set image.tag="$DOCKER_IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
-          
+      
           # Only deploy DB if the image exists
           if [ "$DB_EXISTS" = true ]; then
             echo "Deploying the database container..."
             helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
-              --set initContainers.dbMigration.image.tag="${DB_IMAGE##*:}" \
-              --set db.image.repository="$SERVICE_NAME-db"
+              --set db.image.repository="$DB_IMAGE_REPO" \
+              --set db.image.tag="$DB_IMAGE_TAG" \
+              --set global.domain="$DOMAIN_NAME"
           else
             echo "Skipping DB deployment."
           fi
@@ -403,5 +424,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
           DB_IMAGE: ${{ steps.debug.outputs.db_image }}
-
       
