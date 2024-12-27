@@ -397,7 +397,7 @@ jobs:
             --set image.tag="$DB_IMAGE_TAG" \
             --set db.image.repository="$DB_IMAGE_REPO" \
             --set db.image.tag="$DB_IMAGE_TAG"
-            # --dry-run --debug
+            --set global.domain="$DOMAIN_NAME"
           else
             echo "No database image specified or found. Skipping DB deployment."
           fi
