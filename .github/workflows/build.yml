@@ -336,16 +336,16 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          
+      
           # Debug: Check if DOCKER_IMAGE is set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-          
+      
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
             echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
             exit 1
           fi
-          
+      
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
       
@@ -365,34 +365,40 @@ jobs:
           fi
       
           echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
-          
+      
           # Step 1: Build Helm chart dependencies (resolve local charts)
           echo "Building Helm chart dependencies..."
           helm dependency build "$CHART_DIR"
-          
+      
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
-          
-          # Step 3: Deploy using Helm
-          echo "Deploying service using Helm..."
-          
-          # Extract the tag from the Docker image
+      
+          # Step 3: Extract the tag from the Docker image
           IMAGE_TAG="${DOCKER_IMAGE##*:}"
-          
-          # Deploy the application container (service)
+          echo "Extracted IMAGE_TAG: $IMAGE_TAG"
+      
+          # Step 4: Deploy the application container (service)
+          echo "Deploying service using Helm..."
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
             --set image.tag="$IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
       
-          # Deploy the database container dynamically if the DB image exists in the Docker registry
+          # Step 5: Check if DB image exists
+          DB_IMAGE="${{ secrets.DB_IMAGE }}" # or get from the environment if dynamically set
+          if [ -z "$DB_IMAGE" ]; then
+            # If no DB image is provided, dynamically build the DB image from the service image
+            DB_IMAGE="$SERVICE_NAME-db:$IMAGE_TAG"
+            echo "No DB image found, using: $DB_IMAGE"
+          fi
+      
           echo "Checking if the database image exists..."
-          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
+          if docker pull "$DB_IMAGE" &>/dev/null; then
             echo "Database image found: $DB_IMAGE"
             
-            # If DB image is found, deploy the DB container dynamically (no separate chart)
+            # Deploy the database container dynamically (no separate chart, same chart as service)
             echo "Deploying the database container..."
             helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
@@ -403,13 +409,12 @@ jobs:
               --set db.image.tag="$IMAGE_TAG"
             
           else
-            echo "No database image specified or found. Skipping DB deployment."
+            echo "No database image found for $DB_IMAGE. Skipping DB deployment."
           fi
         shell: /usr/bin/bash -e {0}
         env:
-          # DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
-          DB_IMAGE: ${{ steps.debug.outputs.db_image }}
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
       
