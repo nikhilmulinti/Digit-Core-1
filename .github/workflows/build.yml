@@ -388,7 +388,7 @@ jobs:
 
           # If DB image is found, deploy the DB container dynamically (no separate chart)
           echo "Deploying the database container..."
-          helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
+          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
             --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
@@ -398,24 +398,6 @@ jobs:
           else
             echo "No database image specified or found. Skipping DB deployment."
           fi
-        
-          # # Deploy the database container dynamically if the DB image exists in the Docker registry
-          # echo "Checking if the database image exists..."
-          # if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
-          #   echo "Database image found: $DB_IMAGE"
-            
-          #   # If DB image is found, deploy the DB container dynamically (no separate chart)
-          #   echo "Deploying the database container..."
-          #   helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
-          #     --namespace "$NAMESPACE" \
-          #     -f "$CHART_DIR/values.yaml" \
-          #     --set initContainers.dbMigration.image.repository="${DB_IMAGE%:*}" \
-          #     --set initContainers.dbMigration.image.tag="$IMAGE_TAG" \
-          #     --set db.image.repository="${DB_IMAGE%:*}" \
-          #     --set db.image.tag="$IMAGE_TAG"
-          # else
-          #   echo "No database image specified or found. Skipping DB deployment."
-          # fi
         shell: /usr/bin/bash -e {0}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
