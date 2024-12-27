@@ -55,9 +55,9 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
-    outputs:
-      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+    # outputs:
+    #   docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+    #   db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -157,9 +157,9 @@ jobs:
         id: save-docker-image
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "Docker Image: $DOCKER_IMAGE"
-          # echo "$DOCKER_IMAGE" > docker-image.txt
-          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          # echo "Docker Image: $DOCKER_IMAGE"
+          echo "$DOCKER_IMAGE" > docker-image.txt
+          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           
           
       - name: Save Database Docker Image
@@ -167,8 +167,8 @@ jobs:
         id: save-db-image
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          # echo "$DB_IMAGE" > db-image.txt
-          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+          echo "$DB_IMAGE" > db-image.txt
+          # echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
 
       - name: Debug Docker Image Outputs
         id: debug
@@ -180,27 +180,27 @@ jobs:
           echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
 
-      # - name: Set Docker Images in Artifacts
-      #   run: |
-      #     # Create the artifacts directory if it doesn't exist
-      #     mkdir -p ./artifacts
+      - name: Set Docker Images in Artifacts
+        run: |
+          # Create the artifacts directory if it doesn't exist
+          mkdir -p ./artifacts
           
-      #     # Set the Docker image values
-      #     echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
-      #     echo "$DB_IMAGE" > ./artifacts/db-image.txt
-      #   shell: /usr/bin/bash -e {0}
-      #   env:
-      #     NEXT_TAG: master-e410a69-1
-      #     folder_exists: false
+          # Set the Docker image values
+          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
+          echo "$DB_IMAGE" > ./artifacts/db-image.txt
+        shell: /usr/bin/bash -e {0}
+        env:
+          NEXT_TAG: master-e410a69-1
+          folder_exists: false
         
         
-      # - name: Upload Artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: docker-images
-      #     path: |
-      #       docker-image.txt
-      #       db-image.txt
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-images
+          path: |
+            docker-image.txt
+            db-image.txt
 
       - name: Debug Outputs
         run: |
@@ -214,11 +214,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # - name: Download Artifacts
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: docker-images
-      #     path: ./artifacts
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-images
+          path: ./artifacts
 
       - name: Debug Docker Image Outputs
         id: debug
