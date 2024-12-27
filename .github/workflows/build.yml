@@ -406,8 +406,11 @@ jobs:
             --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
             --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
             --debug
+          else
+            echo "Database image not found or could not be pulled. Skipping DB deployment."
+          fi
             else
-              echo "Database image not found or could not be pulled. Skipping DB deployment."
+              echo "No DB image specified. Skipping DB deployment."
             fi
         shell: /usr/bin/bash -e {0}
         env:
