@@ -337,25 +337,15 @@ jobs:
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           
-          # Debug: Check if DOCKER_IMAGE and DB_IMAGE are set
+          # Debug: Check if DOCKER_IMAGE is set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-          echo "DB_IMAGE: $DB_IMAGE"
           
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
             echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
             exit 1
           fi
-          # Check if the DB image exists in the Docker repository
-          echo "Checking if the database image exists..."
-          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
-            echo "Database image found: $DB_IMAGE"
-            DB_EXISTS=true
-          else
-            echo "Database image not found or not specified. Skipping DB deployment."
-            DB_EXISTS=false
-          fi
-        
+          
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
       
@@ -387,27 +377,33 @@ jobs:
           # Step 3: Deploy using Helm
           echo "Deploying service using Helm..."
           
-          # Extract tag from the Docker image
-          APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
-          DB_IMAGE_TAG="${DB_IMAGE##*:}"
+          # Extract the tag from the Docker image
+          IMAGE_TAG="${DOCKER_IMAGE##*:}"
           
-          # Deploy the application container
+          # Deploy the application container (service)
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
-            --set image.tag="$APP_IMAGE_TAG" \
+            --set image.tag="$IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
-          
-          # Only deploy DB if the image exists
-          if [ "$DB_EXISTS" = true ]; then
+      
+          # Deploy the database container dynamically if the DB image exists in the Docker registry
+          echo "Checking if the database image exists..."
+          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
+            echo "Database image found: $DB_IMAGE"
+            
+            # If DB image is found, deploy the DB container dynamically (no separate chart)
             echo "Deploying the database container..."
             helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
-              --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
-              --set db.image.repository="$SERVICE_NAME-db"
+              --set initContainers.dbMigration.image.repository="$DB_IMAGE" \
+              --set initContainers.dbMigration.image.tag="$IMAGE_TAG" \
+              --set db.image.repository="$SERVICE_NAME-db" \
+              --set db.image.tag="$IMAGE_TAG"
+            
           else
-            echo "Skipping DB deployment."
+            echo "No database image specified or found. Skipping DB deployment."
           fi
         shell: /usr/bin/bash -e {0}
         env:
