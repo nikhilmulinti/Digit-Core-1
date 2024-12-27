@@ -349,13 +349,14 @@ jobs:
       
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
-          
-          # Extract service name from the Docker image (adjust if needed)
+
+          # Extract service name from the Docker image (everything before the colon)
           SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
-          
-          # Search for the chart directory containing the service name
-          CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
-          
+
+          # Recursively search for the chart directory containing the service name and Chart.yaml
+          CHART_DIR=$(find "$CHARTS_DIR" -type d -path "*/$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
+
+          # Check if a matching chart directory was found
           if [ -z "$CHART_DIR" ]; then
             echo "Error: No Helm chart found for service '$SERVICE_NAME' in $CHARTS_DIR."
             exit 1
