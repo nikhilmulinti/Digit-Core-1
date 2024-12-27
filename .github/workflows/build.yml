@@ -398,7 +398,7 @@ jobs:
   
           # Step 6: Deploy the DB container using Helm
           echo "Deploying DB container using Helm..."
-          helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
+          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
             --set db.image.repository="$DB_IMAGE_REPO" \
