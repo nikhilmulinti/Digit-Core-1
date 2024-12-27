@@ -382,15 +382,13 @@ jobs:
           if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
             echo "Database image found: $DB_IMAGE"
 
-          DB_IMAGE_TAG="${DB_IMAGE##*:}"
-
           # If DB image is found, deploy the DB container dynamically (no separate chart)
           echo "Deploying the database container..."
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
-            --set db.image.repository=${DB_IMAGE%:*}" \
-            --set db.image.tag="$DB_IMAGE_TAG"
+            --set initContainers.dbMigration.image.tag="${DB_IMAGE##*:}" \
+            --set db.image.repository="$SERVICE_NAME-db" 
           else
             echo "No database image specified or found. Skipping DB deployment."
           fi
