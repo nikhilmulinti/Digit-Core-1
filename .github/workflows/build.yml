@@ -169,7 +169,7 @@ jobs:
           echo "$DB_IMAGE" > db-image.txt
           # echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
           # echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
-          
+
       - name: Set Docker Images in Artifacts
         run: |
           # Create the artifacts directory if it doesn't exist
@@ -325,10 +325,9 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-      
+          
           # Debug: Check if DOCKER_IMAGE is set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-          echo "DB_IMAGE: $DB_IMAGE"
           
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
@@ -338,67 +337,62 @@ jobs:
           
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
-        
-          # Extract service name and tag from the Docker image
+          
+          # Extract service name from the Docker image (everything after the last '/' and before the colon)
           SERVICE_NAME=$(echo "$DOCKER_IMAGE" | awk -F'/' '{print $NF}' | cut -d':' -f1)
-          IMAGE_TAG=$(echo "$DOCKER_IMAGE" | cut -d':' -f2)
-      
-          # Extract DB image tag if it exists
-          DB_IMAGE_TAG=""
-          if [ -n "$DB_IMAGE" ]; then
-            DB_IMAGE_TAG=$(echo "$DB_IMAGE" | cut -d':' -f2)
-          fi
-      
-          # Debugging: Print the extracted service name and tag
+          
+          # Debugging: Print the extracted service name
           echo "Extracted SERVICE_NAME: $SERVICE_NAME"
-          echo "Extracted IMAGE_TAG: $IMAGE_TAG"
-          echo "Extracted DB_IMAGE_TAG: $DB_IMAGE_TAG"
-      
+          
           # Recursively search for the chart directory containing the service name and Chart.yaml
           CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
-      
+          
           # Check if a matching chart directory was found
           if [ -z "$CHART_DIR" ]; then
             echo "Error: No Helm chart found for service '$SERVICE_NAME' in $CHARTS_DIR."
             exit 1
           fi
-      
+          
           echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
-      
+          
           # Step 1: Build Helm chart dependencies (resolve local charts)
           echo "Building Helm chart dependencies..."
           helm dependency build "$CHART_DIR"
-      
+          
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
-      
+          
           # Step 3: Deploy using Helm
           echo "Deploying service using Helm..."
+          
+          # Extract the tag from the Docker image
+          IMAGE_TAG="${DOCKER_IMAGE##*:}"
           
           # Deploy the application container (service)
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
+            --set image.repository="${DOCKER_IMAGE%:*}" \
             --set image.tag="$IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
-      
+          
           # Deploy the database container dynamically if the DB image exists in the Docker registry
-          if [ -n "$DB_IMAGE" ]; then
+          echo "Checking if the database image exists..."
+          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
             echo "Database image found: $DB_IMAGE"
             
-            # Deploy the DB container dynamically (no separate chart)
+            # If DB image is found, deploy the DB container dynamically (no separate chart)
             echo "Deploying the database container..."
             helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
-              --set initContainers.dbMigration.image.repository="$DB_IMAGE" \
-              --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
-              --set db.image.repository="$SERVICE_NAME-db" \
-              --set db.image.tag="$DB_IMAGE_TAG" \
-              --set global.domain="$DOMAIN_NAME"
+              --set initContainers.dbMigration.image.repository="${DB_IMAGE%:*}" \
+              --set initContainers.dbMigration.image.tag="$IMAGE_TAG" \
+              --set db.image.repository="${DB_IMAGE%:*}" \
+              --set db.image.tag="$IMAGE_TAG"
           else
-            echo "No database image specified. Skipping DB deployment."
+            echo "No database image specified or found. Skipping DB deployment."
           fi
         shell: /usr/bin/bash -e {0}
         env:
