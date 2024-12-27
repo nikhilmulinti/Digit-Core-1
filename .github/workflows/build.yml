@@ -362,20 +362,19 @@ jobs:
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
+
+          # Step 3: Deploy using Helm
+          echo "Deploying service using Helm..."
           
-          # Step 1: Deploy the application image
-          echo "Deploying application service using Helm..."
-
-          # Extract the repository and tag from the Docker application image
-          APP_IMAGE_REPO="${DOCKER_IMAGE%:*}"
-          APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
-
-          # Deploy the application service
+          # Extract the tag from the Docker image
+          IMAGE_TAG="${DOCKER_IMAGE##*:}"
+          
+          # Deploy the application container (service)
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
-            --set image.repository="$APP_IMAGE_REPO" \
-            --set image.tag="$APP_IMAGE_TAG" \
+            --set image.repository="${DOCKER_IMAGE%:*}" \
+            --set image.tag="$IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
 
           # Step 2: Check if the database image exists
