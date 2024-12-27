@@ -347,21 +347,24 @@ jobs:
             DB_EXISTS=false
           fi
       
-          # Define the base charts directory
+          # Def ine the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
 
-          # Extract service name from the Docker image (everything before the colon)
-          SERVICE_NAME=$(echo "$DOCKER_IMAGE" | cut -d':' -f1)
+          # Extract service name from the Docker image (everything after the last '/' and before the colon)
+          SERVICE_NAME=$(echo "$DOCKER_IMAGE" | awk -F'/' '{print $NF}' | cut -d':' -f1)
+
+          # Debugging: Print the extracted service name
+          echo "Extracted SERVICE_NAME: $SERVICE_NAME"
 
           # Recursively search for the chart directory containing the service name and Chart.yaml
-          CHART_DIR=$(find "$CHARTS_DIR" -type d -path "*/$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
+          CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
 
           # Check if a matching chart directory was found
           if [ -z "$CHART_DIR" ]; then
             echo "Error: No Helm chart found for service '$SERVICE_NAME' in $CHARTS_DIR."
             exit 1
           fi
-          
+
           echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
           
           # Step 1: Build Helm chart dependencies (resolve local charts)
