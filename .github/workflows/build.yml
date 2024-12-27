@@ -325,16 +325,16 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          
+      
           # Debug: Check if DOCKER_IMAGE is set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-          
+      
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
             echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
             exit 1
           fi
-          
+      
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
           
@@ -362,48 +362,58 @@ jobs:
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
-
-          #!/bin/bash
-
-          # Step 1: Deploy the application image
-          echo "Deploying application service using Helm..."
-
-          # Extract repository and tag from the Docker application image
+      
+          # Step 3: Extract repository and tag from the Docker application image
           APP_IMAGE_REPO="${DOCKER_IMAGE%:*}"
           APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
-
-          # Helm command to deploy application image
-          helm_upgrade_command=(
-            helm upgrade --install "$SERVICE_NAME" "$CHART_DIR"
-            --namespace "$NAMESPACE"
-            -f "$CHART_DIR/values.yaml"
-            --set image.repository="$APP_IMAGE_REPO"
-            --set image.tag="$APP_IMAGE_TAG"
-            --set global.domain="$DOMAIN_NAME"
-          )
-
-          # Step 2: Check if the database image exists
-          echo "Checking if the database image exists..."
-          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
-            echo "Database image found: $DB_IMAGE"
-
+      
+          # Debugging: Print the extracted repository and tag
+          echo "App Image Repository: $APP_IMAGE_REPO"
+          echo "App Image Tag: $APP_IMAGE_TAG"
+      
+          # Step 4: Deploy the application image using Helm
+          echo "Deploying application service using Helm..."
+          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+            --namespace "$NAMESPACE" \
+            -f "$CHART_DIR/values.yaml" \
+            --set image.repository="$APP_IMAGE_REPO" \
+            --set image.tag="$APP_IMAGE_TAG" \
+            --set global.domain="$DOMAIN_NAME" \
+            --debug
+          
+          # Step 5: Check if the database image exists
+          if [ -n "$DB_IMAGE" ]; then
+            echo "Checking if DB image exists: $DB_IMAGE"
+            docker pull "$DB_IMAGE" &>/dev/null
+            if [ $? -eq 0 ]; then
+              echo "Database image found: $DB_IMAGE"
+              
           # Extract repository and tag from the DB image
           DB_IMAGE_REPO="${DB_IMAGE%:*}"
           DB_IMAGE_TAG="${DB_IMAGE##*:}"
-
-          # Add database-specific values to the Helm command
-          helm_upgrade_command+=(
-            --set db.image.repository="$DB_IMAGE_REPO"
-            --set db.image.tag="$DB_IMAGE_TAG"
-            --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO"
-            --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG"
-          )
-          else
-            echo "No database image specified or found. Skipping DB deployment."
-          fi
+  
+          # Debugging: Print the extracted database repository and tag
+          echo "DB Image Repository: $DB_IMAGE_REPO"
+          echo "DB Image Tag: $DB_IMAGE_TAG"
+  
+          # Step 6: Deploy the DB container using Helm
+          echo "Deploying DB container using Helm..."
+          helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
+            --namespace "$NAMESPACE" \
+            -f "$CHART_DIR/values.yaml" \
+            --set db.image.repository="$DB_IMAGE_REPO" \
+            --set db.image.tag="$DB_IMAGE_TAG" \
+            --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
+            --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
+            --debug
+            else
+              echo "Database image not found or could not be pulled. Skipping DB deployment."
+            fi
         shell: /usr/bin/bash -e {0}
         env:
+          DOMAIN_NAME: unified-dev.digit.org
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
           DB_IMAGE: ${{ steps.debug.outputs.db_image }}
+      
