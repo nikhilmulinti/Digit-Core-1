@@ -336,17 +336,16 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-      
+          
           # Debug: Check if DOCKER_IMAGE and DB_IMAGE are set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
           echo "DB_IMAGE: $DB_IMAGE"
-      
+          
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
             echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
             exit 1
           fi
-      
           # Check if the DB image exists in the Docker repository
           echo "Checking if the database image exists..."
           if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
@@ -356,24 +355,15 @@ jobs:
             echo "Database image not found or not specified. Skipping DB deployment."
             DB_EXISTS=false
           fi
-      
+        
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
       
-          # Extract the repository and tag for application and database images
-          DOCKER_IMAGE_REPO=$(echo "$DOCKER_IMAGE" | awk -F':' '{print $1}')
-          DOCKER_IMAGE_TAG=$(echo "$DOCKER_IMAGE" | awk -F':' '{print $2}')
+          # Extract service name from the Docker image (everything after the last '/' and before the colon)
           SERVICE_NAME=$(echo "$DOCKER_IMAGE" | awk -F'/' '{print $NF}' | cut -d':' -f1)
       
-          DB_IMAGE_REPO=$(echo "$DB_IMAGE" | awk -F':' '{print $1}')
-          DB_IMAGE_TAG=$(echo "$DB_IMAGE" | awk -F':' '{print $2}')
-      
-          # Debugging: Print extracted values
-          echo "DOCKER_IMAGE_REPO: $DOCKER_IMAGE_REPO"
-          echo "DOCKER_IMAGE_TAG: $DOCKER_IMAGE_TAG"
-          echo "SERVICE_NAME: $SERVICE_NAME"
-          echo "DB_IMAGE_REPO: $DB_IMAGE_REPO"
-          echo "DB_IMAGE_TAG: $DB_IMAGE_TAG"
+          # Debugging: Print the extracted service name
+          echo "Extracted SERVICE_NAME: $SERVICE_NAME"
       
           # Recursively search for the chart directory containing the service name and Chart.yaml
           CHART_DIR=$(find "$CHARTS_DIR" -type d -name "$SERVICE_NAME" -exec test -f {}/Chart.yaml \; -print -quit)
@@ -385,35 +375,37 @@ jobs:
           fi
       
           echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
-      
+          
           # Step 1: Build Helm chart dependencies (resolve local charts)
           echo "Building Helm chart dependencies..."
           helm dependency build "$CHART_DIR"
-      
+          
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
-      
+          
           # Step 3: Deploy using Helm
           echo "Deploying service using Helm..."
-      
+          
+          # Extract tag from the Docker image
+          APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
+          DB_IMAGE_TAG="${DB_IMAGE##*:}"
+          
           # Deploy the application container
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
-            --set image.repository="$DOCKER_IMAGE_REPO" \
-            --set image.tag="$DOCKER_IMAGE_TAG" \
+            --set image.tag="$APP_IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
-      
+          
           # Only deploy DB if the image exists
           if [ "$DB_EXISTS" = true ]; then
             echo "Deploying the database container..."
             helm upgrade --install "$SERVICE_NAME-db" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
-              --set db.image.repository="$DB_IMAGE_REPO" \
-              --set db.image.tag="$DB_IMAGE_TAG" \
-              --set global.domain="$DOMAIN_NAME"
+              --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
+              --set db.image.repository="$SERVICE_NAME-db"
           else
             echo "Skipping DB deployment."
           fi
