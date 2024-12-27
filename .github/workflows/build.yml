@@ -363,43 +363,44 @@ jobs:
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
 
-          # Step 3: Deploy using Helm
-          echo "Deploying service using Helm..."
-          
-          # Extract the tag from the Docker image
-          IMAGE_TAG="${DOCKER_IMAGE##*:}"
-          
-          # Deploy the application container (service)
-          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-            --namespace "$NAMESPACE" \
-            -f "$CHART_DIR/values.yaml" \
-            --set image.repository="${DOCKER_IMAGE%:*}" \
-            --set image.tag="$IMAGE_TAG" \
+          #!/bin/bash
+
+          # Step 1: Deploy the application image
+          echo "Deploying application service using Helm..."
+
+          # Extract repository and tag from the Docker application image
+          APP_IMAGE_REPO="${DOCKER_IMAGE%:*}"
+          APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
+
+          # Helm command to deploy application image
+          helm_upgrade_command=(
+            helm upgrade --install "$SERVICE_NAME" "$CHART_DIR"
+            --namespace "$NAMESPACE"
+            -f "$CHART_DIR/values.yaml"
+            --set image.repository="$APP_IMAGE_REPO"
+            --set image.tag="$APP_IMAGE_TAG"
             --set global.domain="$DOMAIN_NAME"
+          )
 
           # Step 2: Check if the database image exists
           echo "Checking if the database image exists..."
           if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
             echo "Database image found: $DB_IMAGE"
 
-          # Extract the repository and tag from the DB image
+          # Extract repository and tag from the DB image
           DB_IMAGE_REPO="${DB_IMAGE%:*}"
           DB_IMAGE_TAG="${DB_IMAGE##*:}"
 
-          # Deploy the database container
-          echo "Deploying the database container using Helm..."
-          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-            --namespace "$NAMESPACE" \
-            -f "$CHART_DIR/values.yaml" \
-            --set db.image.repository="$DB_IMAGE_REPO" \
-            --set db.image.tag="$DB_IMAGE_TAG" \
-            --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
-            --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
-            --set global.domain="$DOMAIN_NAME"
+          # Add database-specific values to the Helm command
+          helm_upgrade_command+=(
+            --set db.image.repository="$DB_IMAGE_REPO"
+            --set db.image.tag="$DB_IMAGE_TAG"
+            --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO"
+            --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG"
+          )
           else
             echo "No database image specified or found. Skipping DB deployment."
           fi
-
         shell: /usr/bin/bash -e {0}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
