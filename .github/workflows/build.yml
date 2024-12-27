@@ -383,20 +383,20 @@ jobs:
           if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
             echo "Database image found: $DB_IMAGE"
 
-            # Extract the repository and tag from the DB image
-            DB_IMAGE_REPO="${DB_IMAGE%:*}"
-            DB_IMAGE_TAG="${DB_IMAGE##*:}"
+          # Extract the repository and tag from the DB image
+          DB_IMAGE_REPO="${DB_IMAGE%:*}"
+          DB_IMAGE_TAG="${DB_IMAGE##*:}"
 
-            # Deploy the database container
-            echo "Deploying the database container using Helm..."
-            helm upgrade --install "${SERVICE_NAME}-db" "$CHART_DIR" \
-              --namespace "$NAMESPACE" \
-              -f "$CHART_DIR/values.yaml" \
-              --set db.image.repository="$DB_IMAGE_REPO" \
-              --set db.image.tag="$DB_IMAGE_TAG" \
-              --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
-              --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
-              --set global.domain="$DOMAIN_NAME"
+          # Deploy the database container
+          echo "Deploying the database container using Helm..."
+          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+            --namespace "$NAMESPACE" \
+            -f "$CHART_DIR/values.yaml" \
+            --set db.image.repository="$DB_IMAGE_REPO" \
+            --set db.image.tag="$DB_IMAGE_TAG" \
+            --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
+            --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
+            --set global.domain="$DOMAIN_NAME"
           else
             echo "No database image specified or found. Skipping DB deployment."
           fi
