@@ -409,9 +409,9 @@ jobs:
           else
             echo "Database image not found or could not be pulled. Skipping DB deployment."
           fi
-            else
-              echo "No DB image specified. Skipping DB deployment."
-            fi
+          else
+            echo "No DB image specified. Skipping DB deployment."
+          fi
         shell: /usr/bin/bash -e {0}
         env:
           DOMAIN_NAME: unified-dev.digit.org
