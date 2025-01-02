@@ -49,13 +49,11 @@ jobs:
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
+  
   build:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
-    # outputs:
-    #   docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-    #   db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -149,14 +147,12 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
           echo "$DOCKER_IMAGE" > docker-image.txt
-          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
-          # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
-          
           
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
@@ -164,8 +160,7 @@ jobs:
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           echo "$DB_IMAGE" > db-image.txt
-          # echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
-          # echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+          
       - name: Set Docker Images in Artifacts
         run: |
           # Create the artifacts directory if it doesn't exist
@@ -174,7 +169,6 @@ jobs:
           # Set the Docker image values
           echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
           echo "$DB_IMAGE" > ./artifacts/db-image.txt
-        shell: /usr/bin/bash -e {0}
         
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -183,6 +177,7 @@ jobs:
           path: |
             docker-image.txt
             db-image.txt
+          
       - name: Debug Outputs
         run: |
           echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
@@ -227,7 +222,7 @@ jobs:
             sudo apt-get update
             sudo apt-get install sops
           else
-            echo "SOPS is already installed, skipping installation."
+            echo "SOPS is already installed"
           fi
       - name: Checkout Branch for Environment File and Helm Charts
         run: |
