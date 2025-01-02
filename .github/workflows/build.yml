@@ -337,7 +337,10 @@ jobs:
           fi
       
           echo "Found Helm chart for '$SERVICE_NAME' at: $CHART_DIR"
-      
+
+          echo "Building Helm chart dependencies..."
+          helm dependency build "$CHART_DIR"
+          
           # Detect namespace from Helm chart (default to 'egov' if not defined)
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
