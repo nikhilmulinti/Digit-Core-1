@@ -46,11 +46,9 @@ jobs:
           else
             echo "::set-output name=changed-services::[]"
           fi
-
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
-
   build:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
@@ -151,7 +149,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
-
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
@@ -169,7 +166,6 @@ jobs:
           echo "$DB_IMAGE" > db-image.txt
           # echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
           # echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
-
       - name: Set Docker Images in Artifacts
         run: |
           # Create the artifacts directory if it doesn't exist
@@ -218,7 +214,6 @@ jobs:
           echo "DB Image: $DB_IMAGE"
           echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
-
       - name: Clone Deployment Repository
         uses: actions/checkout@v3
         with:
@@ -238,7 +233,6 @@ jobs:
           else
             echo "SOPS is already installed, skipping installation."
           fi
-
       - name: Checkout Branch for Environment File and Helm Charts
         run: |
           # Checkout the unified-env-lts branch
@@ -268,7 +262,6 @@ jobs:
           
           # Set the domain name as an environment variable
           echo "DOMAIN_NAME=$DOMAIN_NAME" >> $GITHUB_ENV
-
       - name: Install or Update AWS CLI
         run: |
           if aws --version &>/dev/null; then
@@ -280,7 +273,6 @@ jobs:
             sudo ./aws/install
           fi
           aws --version
-
       - name: Generate kubeconfig for EKS
         run: |
           # Set AWS credentials using GitHub secrets
@@ -290,7 +282,6 @@ jobs:
           
           # Specify the EKS cluster name (you can set this as a secret or environment variable)
           CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
-
           # Generate the kubeconfig for the EKS cluster
           echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
           
@@ -305,7 +296,6 @@ jobs:
         run: |
           echo "Attempting to log in to Kubernetes cluster"
           kubectl get nodes
-
       - name: Validate Image Variables
         run: |
           if [ -z "${DOCKER_IMAGE}" ]; then
@@ -325,16 +315,16 @@ jobs:
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
           echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-      
+          
           # Debug: Check if DOCKER_IMAGE is set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
-      
+          
           # If DOCKER_IMAGE is empty, exit the step
           if [ -z "$DOCKER_IMAGE" ]; then
             echo "Error: DOCKER_IMAGE is empty. Exiting deployment."
             exit 1
           fi
-      
+          
           # Define the base charts directory
           CHARTS_DIR="./deploy-as-code/helm/charts"
           
@@ -362,42 +352,28 @@ jobs:
           # Step 2: Detect namespace from Helm chart (if it's not defined, default to 'egov')
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
-      
-          # Step 3: Extract repository and tag from the Docker application image
+          
+          # Step 1: Deploy the application image
+          echo "Deploying application service using Helm..."
+          # Extract the repository and tag from the Docker application image
           APP_IMAGE_REPO="${DOCKER_IMAGE%:*}"
           APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
-      
-          # Debugging: Print the extracted repository and tag
-          echo "App Image Repository: $APP_IMAGE_REPO"
-          echo "App Image Tag: $APP_IMAGE_TAG"
-      
-          # Step 4: Deploy the application image using Helm
-          echo "Deploying application service using Helm..."
+          # Deploy the application service
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
             --set image.repository="$APP_IMAGE_REPO" \
             --set image.tag="$APP_IMAGE_TAG" \
-            --set global.domain="$DOMAIN_NAME" \
-            --debug
-          
-          # Step 5: Check if the database image exists
-          if [ -n "$DB_IMAGE" ]; then
-            echo "Checking if DB image exists: $DB_IMAGE"
-            docker pull "$DB_IMAGE" &>/dev/null
-            if [ $? -eq 0 ]; then
-              echo "Database image found: $DB_IMAGE"
-              
-          # Extract repository and tag from the DB image
+            --set global.domain="$DOMAIN_NAME"
+          # Step 2: Check if the database image exists
+          echo "Checking if the database image exists..."
+          if [ -n "$DB_IMAGE" ] && docker pull "$DB_IMAGE" &>/dev/null; then
+            echo "Database image found: $DB_IMAGE"
+          # Extract the repository and tag from the DB image
           DB_IMAGE_REPO="${DB_IMAGE%:*}"
           DB_IMAGE_TAG="${DB_IMAGE##*:}"
-  
-          # Debugging: Print the extracted database repository and tag
-          echo "DB Image Repository: $DB_IMAGE_REPO"
-          echo "DB Image Tag: $DB_IMAGE_TAG"
-  
-          # Step 6: Deploy the DB container using Helm
-          echo "Deploying DB container using Helm..."
+          # Deploy the database container
+          echo "Deploying the database container using Helm..."
           helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
             --namespace "$NAMESPACE" \
             -f "$CHART_DIR/values.yaml" \
@@ -405,18 +381,13 @@ jobs:
             --set db.image.tag="$DB_IMAGE_TAG" \
             --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
             --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
-            --debug
+            --set global.domain="$DOMAIN_NAME"
           else
-            echo "Database image not found or could not be pulled. Skipping DB deployment."
-          fi
-          else
-            echo "No DB image specified. Skipping DB deployment."
+            echo "No database image specified or found. Skipping DB deployment."
           fi
         shell: /usr/bin/bash -e {0}
         env:
-          DOMAIN_NAME: unified-dev.digit.org
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
           DB_IMAGE: ${{ steps.debug.outputs.db_image }}
-      
