@@ -54,7 +54,7 @@ jobs:
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     outputs:
-      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+      # docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
       db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
@@ -155,8 +155,7 @@ jobs:
       #   run: |
       #     DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
       #     # echo "$DOCKER_IMAGE" > docker-image.txt
-      #     # echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_ENV
-      #     echo "docker-image=$DOCKER_IMAGE"
+      #     echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
@@ -164,8 +163,7 @@ jobs:
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           # echo "$DB_IMAGE" > db-image.txt
-          # echo "db-image=$DB_IMAGE" >> $GITHUB_ENV
-          echo "db-image=$DB_IMAGE"
+          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
       # - name: Set Docker Images in Artifacts
       #   run: |
       #     # Create the artifacts directory if it doesn't exist
