@@ -113,7 +113,7 @@ jobs:
   Deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ needs.build.outputs.db-images && needs.build.outputs.db-images != '[]' }}
+    if: ${{ fromJson(needs.build.outputs.db-images) != '[]' }}
     steps:
       - name: Debug Deploy Job Inputs
         run: |
