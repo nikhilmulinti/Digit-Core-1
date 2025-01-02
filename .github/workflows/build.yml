@@ -194,17 +194,32 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: docker-images
-          path: ./artifacts
+          # path: ./artifacts
 
-      - name: Debug Docker Image Outputs
-        id: debug
+      # Deploy step for Docker image
+      - name: Check if db-image.txt exists and process images
         run: |
-          DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
-          DB_IMAGE=$(cat ./artifacts/db-image.txt)
-          echo "Docker Image: $DOCKER_IMAGE"
-          echo "DB Image: $DB_IMAGE"
-          echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
-          echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
+          # Check if db-image.txt exists
+          if [ -f "./artifacts/db-image.txt" ]; then
+            DB_IMAGE=$(cat ./artifacts/db-image.txt)
+            echo "DB Image: $DB_IMAGE"
+            echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
+          else
+            echo "db-image.txt not found. Skipping DB image upload."
+            DB_IMAGE="N/A"  # You can set a placeholder if you need to handle it later
+            echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
+          fi
+
+          # Ensure the Docker image file exists
+          if [ -f "./artifacts/docker-image.txt" ]; then
+            DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
+            echo "Docker Image: $DOCKER_IMAGE"
+            echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          else
+            echo "docker-image.txt not found. Skipping application image upload."
+            exit 1  # You can exit or handle the failure case as needed
+          fi
+
       - name: Clone Deployment Repository
         uses: actions/checkout@v3
         with:
