@@ -76,6 +76,7 @@ jobs:
             echo "folder_exists=true" >> $GITHUB_ENV
           else
             echo "folder_exists=false" >> $GITHUB_ENV
+          fi
 
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
