@@ -355,14 +355,14 @@ jobs:
           DB_IMAGE="${DB_IMAGE_REPO}:${DB_IMAGE_TAG}"
           echo "Database Image: $DB_IMAGE"
       
-          # Deploy the application image
-          echo "Deploying application service using Helm..."
-          helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-            --namespace "$NAMESPACE" \
-            -f "$CHART_DIR/values.yaml" \
-            --set image.repository="$APP_IMAGE_REPO" \
-            --set image.tag="$APP_IMAGE_TAG" \
-            --set global.domain="$DOMAIN_NAME"
+          # # Deploy the application image
+          # echo "Deploying application service using Helm..."
+          # helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+          #   --namespace "$NAMESPACE" \
+          #   -f "$CHART_DIR/values.yaml" \
+          #   --set image.repository="$APP_IMAGE_REPO" \
+          #   --set image.tag="$APP_IMAGE_TAG" \
+          #   --set global.domain="$DOMAIN_NAME"
       
           # Check if the DB image exists
           echo "Checking for database image: $DB_IMAGE"
@@ -380,6 +380,8 @@ jobs:
             helm upgrade --install "${SERVICE_NAME}" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
+              --set image.repository="$APP_IMAGE_REPO" \
+              --set image.tag="$APP_IMAGE_TAG" \
               --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
               --set global.domain="$DOMAIN_NAME"
           else
