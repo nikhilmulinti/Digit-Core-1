@@ -49,13 +49,12 @@ jobs:
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
-
   build:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     outputs:
-      db-image2: ${{ steps.save-db-image.outputs.db-image1 }}
+      db-images: ${{ steps.collect-db-images.outputs.images }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -69,13 +68,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Generate the Next Tag
-        id: tag
-        run: |
-          # Generate tag logic here
-          echo "::set-output name=tag::generated-tag"
-          echo "Generated Tag: generated-tag"
-
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
@@ -84,7 +76,6 @@ jobs:
             echo "folder_exists=true" >> $GITHUB_ENV
           else
             echo "folder_exists=false" >> $GITHUB_ENV
-          fi
 
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
@@ -104,16 +95,25 @@ jobs:
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:generated-tag"
           echo "db-image1=$DB_IMAGE" >> $GITHUB_OUTPUT
 
-      - name: Debug Save Database Docker Image Output
-        if: ${{ env.folder_exists == 'true' }}
+      - name: Collect DB Images
+        id: collect-db-images
         run: |
-          echo "Saved DB Image: ${{ steps.save-db-image.outputs.db-image1 }}"
+          echo "Collecting DB Images..."
+          echo "[]" > db-images.json
+          if [[ -n "${{ steps.save-db-image.outputs.db-image1 }}" ]]; then
+            echo "[\"${{ steps.save-db-image.outputs.db-image1 }}\"]" > db-images.json
+          fi
+          echo "images=$(cat db-images.json)" >> $GITHUB_OUTPUT
+
+      - name: Debug Collected DB Images
+        run: |
+          echo "Collected DB Images: ${{ steps.collect-db-images.outputs.images }}"
 
   Deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ needs.build.outputs.db-image2 && needs.build.outputs.db-image2 != '' }}
+    if: ${{ needs.build.outputs.db-images && needs.build.outputs.db-images != '[]' }}
     steps:
       - name: Debug Deploy Job Inputs
         run: |
-          echo "Received db-image2: ${{ needs.build.outputs.db-image2 }}"
+          echo "DB Images: ${{ needs.build.outputs.db-images }}"
