@@ -354,16 +354,7 @@ jobs:
           DB_IMAGE_TAG="${APP_IMAGE_TAG}"
           DB_IMAGE="${DB_IMAGE_REPO}:${DB_IMAGE_TAG}"
           echo "Database Image: $DB_IMAGE"
-      
-          # # Deploy the application image
-          # echo "Deploying application service using Helm..."
-          # helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-          #   --namespace "$NAMESPACE" \
-          #   -f "$CHART_DIR/values.yaml" \
-          #   --set image.repository="$APP_IMAGE_REPO" \
-          #   --set image.tag="$APP_IMAGE_TAG" \
-          #   --set global.domain="$DOMAIN_NAME"
-      
+            
           # Check if the DB image exists
           echo "Checking for database image: $DB_IMAGE"
           if docker pull "$DB_IMAGE" &>/dev/null; then
@@ -385,7 +376,13 @@ jobs:
               --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
               --set global.domain="$DOMAIN_NAME"
           else
-            echo "Skipping database deployment for service '$SERVICE_NAME'."
+            echo "Deploying application service using Helm..."
+            helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+              --namespace "$NAMESPACE" \
+              -f "$CHART_DIR/values.yaml" \
+              --set image.repository="$APP_IMAGE_REPO" \
+              --set image.tag="$APP_IMAGE_TAG" \
+              --set global.domain="$DOMAIN_NAME"
           fi
         shell: /usr/bin/bash -e {0}
         env:
