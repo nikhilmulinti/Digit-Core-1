@@ -340,7 +340,7 @@ jobs:
 
           echo "Building Helm chart dependencies..."
           helm dependency build "$CHART_DIR"
-          
+
           # Detect namespace from Helm chart (default to 'egov' if not defined)
           NAMESPACE=$(yq e '.namespace // "egov"' "$CHART_DIR/values.yaml")
           echo "Using namespace: $NAMESPACE"
@@ -377,7 +377,7 @@ jobs:
           # Deploy the database container only if the image exists
           if [ "$DB_IMAGE_EXISTS" = true ]; then
             echo "Deploying the database container using Helm..."
-            helm upgrade --install "${SERVICE_NAME}-db" "$CHART_DIR" \
+            helm upgrade --install "${SERVICE_NAME}" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
               --set db.image.repository="$DB_IMAGE_REPO" \
