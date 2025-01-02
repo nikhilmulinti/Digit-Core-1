@@ -346,18 +346,11 @@ jobs:
           APP_IMAGE_REPO="${DOCKER_IMAGE%:*}"
           APP_IMAGE_TAG="${DOCKER_IMAGE##*:}"
       
-          # Check if the DB image exists for the service
-          DB_IMAGE="${DOCKER_USERNAME}/${SERVICE_NAME}-db:latest"
-          echo "Checking for database image: $DB_IMAGE"
-          if docker pull "$DB_IMAGE" &>/dev/null; then
-            echo "Database image found: $DB_IMAGE"
-            DB_IMAGE_EXISTS=true
-            DB_IMAGE_REPO="${DB_IMAGE%:*}"
-            DB_IMAGE_TAG="${DB_IMAGE##*:}"
-          else
-            echo "No database image found for service '$SERVICE_NAME'. Skipping DB deployment."
-            DB_IMAGE_EXISTS=false
-          fi
+          # Dynamically set the database image to use the same tag as the application image
+          DB_IMAGE_REPO="${DOCKER_USERNAME}/${SERVICE_NAME}-db"
+          DB_IMAGE_TAG="${APP_IMAGE_TAG}"
+          DB_IMAGE="${DB_IMAGE_REPO}:${DB_IMAGE_TAG}"
+          echo "Database Image: $DB_IMAGE"
       
           # Deploy the application image
           echo "Deploying application service using Helm..."
@@ -367,6 +360,16 @@ jobs:
             --set image.repository="$APP_IMAGE_REPO" \
             --set image.tag="$APP_IMAGE_TAG" \
             --set global.domain="$DOMAIN_NAME"
+      
+          # Check if the DB image exists
+          echo "Checking for database image: $DB_IMAGE"
+          if docker pull "$DB_IMAGE" &>/dev/null; then
+            echo "Database image found: $DB_IMAGE"
+            DB_IMAGE_EXISTS=true
+          else
+            echo "No database image found for service '$SERVICE_NAME'. Skipping DB deployment."
+            DB_IMAGE_EXISTS=false
+          fi
       
           # Deploy the database container only if the image exists
           if [ "$DB_IMAGE_EXISTS" = true ]; then
@@ -390,4 +393,3 @@ jobs:
           DOMAIN_NAME: "unified-dev.digit.org"
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      
