@@ -194,7 +194,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: docker-images
-          # path: ./artifacts
+          path: ./artifacts
 
       # Deploy step for Docker image
       - name: Check if db-image.txt exists and process images
