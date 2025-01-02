@@ -380,8 +380,6 @@ jobs:
             helm upgrade --install "${SERVICE_NAME}" "$CHART_DIR" \
               --namespace "$NAMESPACE" \
               -f "$CHART_DIR/values.yaml" \
-              --set db.image.repository="$DB_IMAGE_REPO" \
-              --set db.image.tag="$DB_IMAGE_TAG" \
               --set initContainers.dbMigration.image.repository="$DB_IMAGE_REPO" \
               --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
               --set global.domain="$DOMAIN_NAME"
