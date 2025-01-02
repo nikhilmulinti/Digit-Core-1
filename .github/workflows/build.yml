@@ -49,6 +49,7 @@ jobs:
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
+
   build:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
@@ -74,60 +75,36 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
-          echo "Generating the next tag for service: ${{ matrix.service }}"
-      
-          # Set variables
           BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME=${{ matrix.service }}
-      
-          # Log in to Docker Hub and fetch a token
+
           TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
             -H "Content-Type: application/json" \
             -d '{"username": "'$DOCKER_USERNAME'", "password": "'$DOCKER_PASSWORD'"}' | jq -r .token)
-      
-          # Check if the repository exists
+
           REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/")
-      
+
           if [ "$REPO_CHECK" -ne 200 ]; then
-            echo "Repository does not exist. Assuming a first-time build."
             NEXT_TAG="${BRANCH}-${COMMIT_HASH}-1"
           else
-            # Fetch existing tags for the service
             EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
               "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-      
-            # Filter for the current branch and commit hash
             LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}-" | sort -V | tail -n 1)
             if [ -z "$LATEST_TAG" ]; then
-              # No tag exists for this branch and commit hash
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}-1"
             else
-              # Increment the numeric part of the latest tag
               TAG_NUMBER=$(echo "$LATEST_TAG" | awk -F- '{print $NF}')
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}-$((TAG_NUMBER + 1))"
             fi
           fi
-      
-          # Export the next tag
+
           echo "::set-output name=tag::$NEXT_TAG"
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Generated Tag: $NEXT_TAG"
 
-      # - name: Build and Push Application Docker Image
-      #   id: build_push_docker
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     file: build/maven/Dockerfile
-      #     push: true
-      #     tags: |
-      #       ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
-      #     build-args: |
-      #       WORK_DIR=core-services/${{ matrix.service }}
-          
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
@@ -137,7 +114,7 @@ jobs:
           else
             echo "folder_exists=false" >> $GITHUB_ENV
           fi
-  
+
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: build_push_db_docker
@@ -149,13 +126,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
-      # - name: Save Application Docker Image
-      #   id: save-docker-image
-      #   run: |
-      #     DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-      #     # echo "$DOCKER_IMAGE" > docker-image.txt
-      #     echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
-          
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
@@ -167,45 +137,12 @@ jobs:
         run: |
           echo "Database Image: ${{ steps.save-db-image.outputs.db-image1 }}"
 
-      # - name: Set Docker Images in Artifacts
-      #   run: |
-      #     # Create the artifacts directory if it doesn't exist
-      #     mkdir -p ./artifacts
-          
-      #     # Set the Docker image values
-      #     echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
-      #     echo "$DB_IMAGE" > ./artifacts/db-image.txt
-      #   shell: /usr/bin/bash -e {0}
-      #   env:
-      #     NEXT_TAG: master-e410a69-1
-      #     folder_exists: false
-  
-      # - name: Upload Artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: docker-images
-      #     path: |
-      #       docker-image.txt
-      #       db-image.txt
-    
-      # - name: Show Contents of Text Files
-      #   run: |
-      #     echo "Contents of docker-image.txt:"
-      #     cat docker-image.txt || echo "File docker-image.txt not found!"
-          
-      #     echo "Contents of db-image.txt:"
-      #     cat db-image.txt || echo "File db-image.txt not found!"        
-            
-      # - name: Debug Outputs
-      #   run: |
-      #     echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
-      #     echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
-        
   Deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ needs.build.outputs.db-image2 != '' }}  # Check if output is non-empty
+    if: ${{ needs.build.outputs.db-image2 != '' }}
     steps:
       - name: Debug Docker Image and DB Image
         run: |
           echo "DB_IMAGE2: ${{ needs.build.outputs.db-image2 }}"
+
