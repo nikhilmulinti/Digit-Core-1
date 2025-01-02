@@ -163,7 +163,7 @@ jobs:
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           # echo "$DB_IMAGE" > db-image.txt
-          echo "db-image1=$DB_IMAGE" >> $GITHUB_OUTPUT
+          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
 
       - name: Show DB Image Output
         run: |
