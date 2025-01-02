@@ -175,10 +175,6 @@ jobs:
           echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
           echo "$DB_IMAGE" > ./artifacts/db-image.txt
         shell: /usr/bin/bash -e {0}
-        env:
-          NEXT_TAG: master-e410a69-1
-          folder_exists: false
-        
         
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
