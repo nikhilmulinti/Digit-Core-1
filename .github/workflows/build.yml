@@ -157,6 +157,7 @@ jobs:
           DOCKER="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
           echo "docker_image=$DOCKER"
           echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
+          pwd && cat "$GITHUB_OUTPUT"
           
       - name: Save Database Docker Image
         id: save_db_image
@@ -165,6 +166,7 @@ jobs:
           DB="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           echo "db_image=$DB"
           echo "db_image=$DB" >> "$GITHUB_OUTPUT"
+          pwd && cat "$GITHUB_OUTPUT"
 
           
       # - name: Set Docker Images in Artifacts
