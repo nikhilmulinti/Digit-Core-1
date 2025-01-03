@@ -153,6 +153,7 @@ jobs:
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
           echo "::set-output name=app_image::$DOCKER_IMAGE"
+          echo "App Image: $DOCKER_IMAGE"
           
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
@@ -160,6 +161,7 @@ jobs:
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           echo "::set-output name=db_image::$DB_IMAGE"
+          echo "DB Image: $DB_IMAGE"
 
     outputs:
       app_image: ${{ steps.save-docker-image.outputs.app_image }}
