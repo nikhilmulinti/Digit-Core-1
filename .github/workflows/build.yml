@@ -54,12 +54,12 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
-    outputs:
-      docker-image1: ${{ steps.save-docker-image.outputs.docker-image }}
-      db-image1: ${{ steps.save-db-image.outputs.db-image }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
+    outputs:
+      docker-image: ${{ steps.save-docker-image.outputs.docker_image }}
+      db-image: ${{ steps.save-db-image.outputs.db_image }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -153,16 +153,18 @@ jobs:
 
       - name: Save Application Docker Image
         id: save-docker-image
+        if: ${{ matrix.service == 'app' }}
         run: |
-          DOCKER="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker-image=$DOCKER" >> "$GITHUB_OUTPUT"
+          DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/app:${{ steps.tag.outputs.tag }}"
+          echo "docker_image=$DOCKER_IMAGE" >> "$GITHUB_OUTPUT"
           
       - name: Save Database Docker Image
-        if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
+        if: ${{ matrix.service == 'db' }}
         run: |
-          DB="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db-image=$DB" >> "$GITHUB_OUTPUT"
+          DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/db:${{ steps.tag.outputs.tag }}"
+          echo "db_image=$DB_IMAGE" >> "$GITHUB_OUTPUT"
+
           
       # - name: Set Docker Images in Artifacts
       #   run: |
@@ -185,10 +187,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - env:
-          DOCKER_IMAGE: ${{ needs.build.outputs.docker-image1 }}
-          DB_IMAGE: ${{ needs.build.outputs.db-image1 }}
-        run: echo "$DOCKER_IMAGE" "$DB_IMAGE"
+      - name: Deploy Services
+        env:
+          DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}
+          DB_IMAGE: ${{ needs.build.outputs.db-image }}
+        run: |
+          echo "Application Docker Image: $DOCKER_IMAGE"
+          echo "Database Docker Image: $DB_IMAGE"
 
       # - name: Checkout Code
       #   uses: actions/checkout@v3
