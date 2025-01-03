@@ -9,7 +9,7 @@ on:
       - 'core-services/**'  # Trigger only if files within 'core-services' change
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
 jobs:
   detect-changes:
@@ -71,13 +71,10 @@ jobs:
         uses: docker/login-action@v2
         with:
           username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
       - name: Generate the Next Tag
         id: tag
-        # env:
-        #   DOCKER_USERNAME: $DOCKER_USERNAME
-        #   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo "Generating the next tag for service: ${{ matrix.service }}"
       
@@ -129,7 +126,7 @@ jobs:
           file: build/maven/Dockerfile
           push: true
           tags: |
-            $DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
           
@@ -152,7 +149,7 @@ jobs:
           file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
           push: true
           tags: |
-            $DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
       - name: Save Application Docker Image
         id: save_docker_image
@@ -160,7 +157,6 @@ jobs:
           DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
           echo "docker_image=$DOCKER"
           echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
-          pwd && cat "$GITHUB_OUTPUT"
           
       - name: Save Database Docker Image
         id: save_db_image
@@ -179,6 +175,7 @@ jobs:
       DB_IMAGE: ${{ needs.build.outputs.db_image }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
       DOMAIN_NAME: "unified-dev.digit.org"
     steps:
       # - name: Deploy Services
@@ -251,9 +248,9 @@ jobs:
       - name: Generate kubeconfig for EKS
         run: |
           # Set AWS credentials using GitHub secrets
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region ${{ secrets.AWS_REGION }}
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set region $AWS_REGION
           
           # Specify the EKS cluster name (you can set this as a secret or environment variable)
           CLUSTER_NAME="unified-dev"  # Replace with your actual cluster name or use a secret/environment variable
@@ -261,7 +258,7 @@ jobs:
           echo "Generating kubeconfig for EKS cluster: $CLUSTER_NAME"
           
           # Update kubeconfig using AWS CLI
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
           
           # View the generated kubeconfig to confirm
           kubectl config view
@@ -286,7 +283,7 @@ jobs:
         run: |
           # Authenticate with Docker registry
           echo "Logging into Docker registry..."
-          echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "$DOCKER_USERNAME" --password-stdin
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
           
           # Debug: Check if DOCKER_IMAGE is set
           echo "DOCKER_IMAGE: $DOCKER_IMAGE"
