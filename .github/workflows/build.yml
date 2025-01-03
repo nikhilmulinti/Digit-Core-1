@@ -54,6 +54,9 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
+    outputs:
+      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
+      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -152,20 +155,14 @@ jobs:
         id: save-docker-image
         run: |
           DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "::set-output name=app_image::$DOCKER_IMAGE"
-          echo "App Image: $DOCKER_IMAGE"
+          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
           
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
           DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "::set-output name=db_image::$DB_IMAGE"
-          echo "DB Image: $DB_IMAGE"
-
-    outputs:
-      app_image: ${{ steps.save-docker-image.outputs.app_image }}
-      db_image: ${{ steps.save-db-image.outputs.db_image }}
+          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
           
       # - name: Set Docker Images in Artifacts
       #   run: |
@@ -193,8 +190,8 @@ jobs:
 
       - name: Use Docker Images
         run: |
-          echo "Application Docker Image: ${{ needs.build.outputs.app_image }}"
-          echo "Database Docker Image: ${{ needs.build.outputs.db_image }}"
+          echo "Application Docker Image: ${{ needs.build.outputs.docker-image }}"
+          echo "Database Docker Image: ${{ needs.build.outputs.db-image }}"
 
       # - name: Download Artifacts
       #   uses: actions/download-artifact@v3
@@ -318,7 +315,7 @@ jobs:
             echo "Warning: DB_IMAGE is empty. Proceeding without DB deployment."
           fi
         env:
-          DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
+          DOCKER_IMAGE: ${{ steps.debug.outputs.dockerimage }}
           DB_IMAGE: ${{ steps.debug.outputs.db_image }}
         
       - name: Deploy Service
