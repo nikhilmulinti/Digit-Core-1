@@ -148,40 +148,40 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
-      - name: Save Application Docker Image
-        id: save-docker-image
-        run: |
-          DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "$DOCKER_IMAGE" > docker-image.txt
+      # - name: Save Application Docker Image
+      #   id: save-docker-image
+      #   run: |
+      #     DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+      #     echo "$DOCKER_IMAGE" > docker-image.txt
           
-      - name: Save Database Docker Image
-        if: ${{ env.folder_exists == 'true' }}
-        id: save-db-image
-        run: |
-          DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "$DB_IMAGE" > db-image.txt
+      # - name: Save Database Docker Image
+      #   if: ${{ env.folder_exists == 'true' }}
+      #   id: save-db-image
+      #   run: |
+      #     DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+      #     echo "$DB_IMAGE" > db-image.txt
           
-      - name: Set Docker Images in Artifacts
-        run: |
-          # Create the artifacts directory if it doesn't exist
-          mkdir -p ./artifacts
+      # - name: Set Docker Images in Artifacts
+      #   run: |
+      #     # Create the artifacts directory if it doesn't exist
+      #     mkdir -p ./artifacts
           
-          # Set the Docker image values
-          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
-          # echo "$DB_IMAGE" > ./artifacts/db-image.txt
+      #     # Set the Docker image values
+      #     echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
+      #     # echo "$DB_IMAGE" > ./artifacts/db-image.txt
         
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: docker-images
-          path: |
-            docker-image.txt
-            # db-image.txt
+      # - name: Upload Artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: docker-images
+      #     path: |
+      #       docker-image.txt
+      #       # db-image.txt
           
-      - name: Debug Outputs
-        run: |
-          echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
-          echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
+      # - name: Debug Outputs
+      #   run: |
+      #     echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
+      #     echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
         
   Deploy:
     needs: build
@@ -190,35 +190,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-images
-          path: ./artifacts
+      # - name: Download Artifacts
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: docker-images
+      #     path: ./artifacts
 
-      # Deploy step for Docker image
-      - name: Check if db-image.txt exists and process images
-        run: |
-          # Check if db-image.txt exists
-          if [ -f "./artifacts/db-image.txt" ]; then
-            DB_IMAGE=$(cat ./artifacts/db-image.txt)
-            echo "DB Image: $DB_IMAGE"
-            echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
-          else
-            echo "db-image.txt not found. Skipping DB image upload."
-            DB_IMAGE="N/A"  # You can set a placeholder if you need to handle it later
-            echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
-          fi
+      # # Deploy step for Docker image
+      # - name: Check if db-image.txt exists and process images
+      #   run: |
+      #     # Check if db-image.txt exists
+      #     if [ -f "./artifacts/db-image.txt" ]; then
+      #       DB_IMAGE=$(cat ./artifacts/db-image.txt)
+      #       echo "DB Image: $DB_IMAGE"
+      #       echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "db-image.txt not found. Skipping DB image upload."
+      #       DB_IMAGE="N/A"  # You can set a placeholder if you need to handle it later
+      #       echo "DB_IMAGE=$DB_IMAGE" >> $GITHUB_OUTPUT
+      #     fi
 
-          # Ensure the Docker image file exists
-          if [ -f "./artifacts/docker-image.txt" ]; then
-            DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
-            echo "Docker Image: $DOCKER_IMAGE"
-            echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
-          else
-            echo "docker-image.txt not found. Skipping application image upload."
-            exit 1  # You can exit or handle the failure case as needed
-          fi
+      #     # Ensure the Docker image file exists
+      #     if [ -f "./artifacts/docker-image.txt" ]; then
+      #       DOCKER_IMAGE=$(cat ./artifacts/docker-image.txt)
+      #       echo "Docker Image: $DOCKER_IMAGE"
+      #       echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "docker-image.txt not found. Skipping application image upload."
+      #       exit 1  # You can exit or handle the failure case as needed
+      #     fi
 
       - name: Clone Deployment Repository
         uses: actions/checkout@v3
