@@ -49,6 +49,7 @@ jobs:
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
+          echo "${DOCKER_USERNAME}"
   
   build:
     needs: detect-changes
