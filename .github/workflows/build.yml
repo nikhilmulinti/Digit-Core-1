@@ -49,9 +49,6 @@ jobs:
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
-          echo "$DOCKER_USERNAME"
-        env:
-          DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   
   build:
     needs: detect-changes
@@ -70,13 +67,13 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: $DOCKER_USERNAME
+          username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Generate the Next Tag
         id: tag
         env:
-          DOCKER_USERNAME: $DOCKER_USERNAME
+          DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo "Generating the next tag for service: ${{ matrix.service }}"
@@ -129,7 +126,7 @@ jobs:
           file: build/maven/Dockerfile
           push: true
           tags: |
-            $DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
             WORK_DIR=core-services/${{ matrix.service }}
           
@@ -152,12 +149,12 @@ jobs:
           file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
           push: true
           tags: |
-            $DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
-          DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          DOCKER="${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
           echo "docker_image=$DOCKER"
           echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
           pwd && cat "$GITHUB_OUTPUT"
@@ -166,10 +163,9 @@ jobs:
         id: save_db_image
         if: ${{ env.folder_exists == 'true' }}
         run: |
-          DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          DB="${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           echo "db_image=$DB"
           echo "db_image=$DB" >> "$GITHUB_OUTPUT"
-          pwd && cat "$GITHUB_OUTPUT"
 
           
       # - name: Set Docker Images in Artifacts
@@ -338,7 +334,7 @@ jobs:
       #   run: |
       #     # Authenticate with Docker registry
       #     echo "Logging into Docker registry..."
-      #     echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "$DOCKER_USERNAME" --password-stdin
+      #     echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login --username "${{ vars.DOCKER_USERNAME }}" --password-stdin
           
       #     # Debug: Check if DOCKER_IMAGE is set
       #     echo "DOCKER_IMAGE: $DOCKER_IMAGE"
@@ -414,5 +410,5 @@ jobs:
       #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       #     DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
       #     DOMAIN_NAME: "unified-dev.digit.org"
-      #     DOCKER_USERNAME: $DOCKER_USERNAME
+      #     DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
       #     DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
