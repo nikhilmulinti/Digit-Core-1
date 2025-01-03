@@ -176,16 +176,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      DOMAIN_NAME: "unified-dev.digit.org"
+      # DOMAIN_NAME: "unified-dev.digit.org"
     steps:
-      # - name: Deploy Services
-      #   env:
-      #     DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
-      #     DB_IMAGE: ${{ needs.build.outputs.db_image }}
-      #   run: |
-      #     echo "$DOCKER_IMAGE"
-      #     echo "$DB_IMAGE"
-
       - name: Clone Deployment Repository
         uses: actions/checkout@v3
         with:
