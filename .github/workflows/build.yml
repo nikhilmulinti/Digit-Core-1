@@ -355,7 +355,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOCKER_IMAGE: ${{ steps.debug.outputs.docker_image }}
+          DOCKER_IMAGE: ${{ steps.debug.outputs.DOCKER_IMAGE }}
           DOMAIN_NAME: "unified-dev.digit.org"
           DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
