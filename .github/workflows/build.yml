@@ -350,6 +350,7 @@ jobs:
               --set image.repository="$APP_IMAGE_REPO" \
               --set image.tag="$APP_IMAGE_TAG" \
               --set global.domain="$DOMAIN_NAME"
+          fi
         shell: /usr/bin/bash -e {0}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
