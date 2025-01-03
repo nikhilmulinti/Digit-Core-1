@@ -148,18 +148,22 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
-      # - name: Save Application Docker Image
-      #   id: save-docker-image
-      #   run: |
-      #     DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-      #     echo "$DOCKER_IMAGE" > docker-image.txt
+      - name: Save Application Docker Image
+        id: save-docker-image
+        run: |
+          DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "::set-output name=app_image::$DOCKER_IMAGE"
           
-      # - name: Save Database Docker Image
-      #   if: ${{ env.folder_exists == 'true' }}
-      #   id: save-db-image
-      #   run: |
-      #     DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-      #     echo "$DB_IMAGE" > db-image.txt
+      - name: Save Database Docker Image
+        if: ${{ env.folder_exists == 'true' }}
+        id: save-db-image
+        run: |
+          DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "::set-output name=db_image::$DB_IMAGE"
+
+    outputs:
+      app_image: ${{ steps.save-docker-image.outputs.app_image }}
+      db_image: ${{ steps.save-db-image.outputs.db_image }}
           
       # - name: Set Docker Images in Artifacts
       #   run: |
@@ -177,11 +181,6 @@ jobs:
       #     path: |
       #       docker-image.txt
       #       # db-image.txt
-          
-      # - name: Debug Outputs
-      #   run: |
-      #     echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
-      #     echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
         
   Deploy:
     needs: build
@@ -189,6 +188,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Use Docker Images
+        run: |
+          echo "Application Docker Image: ${{ needs.build.outputs.app_image }}"
+          echo "Database Docker Image: ${{ needs.build.outputs.db_image }}"
 
       # - name: Download Artifacts
       #   uses: actions/download-artifact@v3
@@ -361,15 +365,6 @@ jobs:
           DB_IMAGE="${DB_IMAGE_REPO}:${DB_IMAGE_TAG}"
           echo "Database Image: $DB_IMAGE"
       
-          # # Deploy the application image
-          # echo "Deploying application service using Helm..."
-          # helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
-          #   --namespace "$NAMESPACE" \
-          #   -f "$CHART_DIR/values.yaml" \
-          #   --set image.repository="$APP_IMAGE_REPO" \
-          #   --set image.tag="$APP_IMAGE_TAG" \
-          #   --set global.domain="$DOMAIN_NAME"
-      
           # Check if the DB image exists
           echo "Checking for database image: $DB_IMAGE"
           if docker pull "$DB_IMAGE" &>/dev/null; then
@@ -391,8 +386,13 @@ jobs:
               --set initContainers.dbMigration.image.tag="$DB_IMAGE_TAG" \
               --set global.domain="$DOMAIN_NAME"
           else
-            echo "Skipping database deployment for service '$SERVICE_NAME'."
-          fi
+            echo "Deploying application service using Helm..."
+            helm upgrade --install "$SERVICE_NAME" "$CHART_DIR" \
+              --namespace "$NAMESPACE" \
+              -f "$CHART_DIR/values.yaml" \
+              --set image.repository="$APP_IMAGE_REPO" \
+              --set image.tag="$APP_IMAGE_TAG" \
+              --set global.domain="$DOMAIN_NAME"
         shell: /usr/bin/bash -e {0}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
