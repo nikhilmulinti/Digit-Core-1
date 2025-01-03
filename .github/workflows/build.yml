@@ -153,17 +153,16 @@ jobs:
 
       - name: Save Application Docker Image
         id: save-docker-image
-        if: ${{ matrix.service == 'app' }}
         run: |
-          DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/app:${{ steps.tag.outputs.tag }}"
-          echo "docker_image=$DOCKER_IMAGE" >> "$GITHUB_OUTPUT"
+          DOCKER="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
           
       - name: Save Database Docker Image
         id: save-db-image
-        if: ${{ matrix.service == 'db' }}
+        if: ${{ env.folder_exists == 'true' }}
         run: |
-          DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/db:${{ steps.tag.outputs.tag }}"
-          echo "db_image=$DB_IMAGE" >> "$GITHUB_OUTPUT"
+          DB="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db_image=$DB" >> "$GITHUB_OUTPUT"
 
           
       # - name: Set Docker Images in Artifacts
