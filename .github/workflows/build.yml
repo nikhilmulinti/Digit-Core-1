@@ -173,7 +173,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Services
-        id: debug
         env:
           DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
           DB_IMAGE: ${{ needs.build.outputs.db_image }}
@@ -274,8 +273,8 @@ jobs:
             echo "Warning: DB_IMAGE is empty. Proceeding without DB deployment."
           fi
         env:
-          DOCKER_IMAGE: ${{ steps.debug.outputs.DOCKER_IMAGE }}
-          DB_IMAGE: ${{ steps.debug.outputs.DB_IMAGE }}
+          DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
+          DB_IMAGE: ${{ needs.build.outputs.db_image }}
         
       - name: Deploy Service
         run: |
