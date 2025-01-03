@@ -58,8 +58,8 @@ jobs:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
     outputs:
-      docker-image: ${{ steps.save-docker-image.outputs.docker_image }}
-      db-image: ${{ steps.save-db-image.outputs.db_image }}
+      docker_image: ${{ steps.save_docker_image.outputs.docker_image }}
+      db_image: ${{ steps.save_db_image.outputs.db_image }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -152,16 +152,18 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
       - name: Save Application Docker Image
-        id: save-docker-image
+        id: save_docker_image
         run: |
           DOCKER="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker_image=$DOCKER"
           echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
           
       - name: Save Database Docker Image
-        id: save-db-image
+        id: save_db_image
         if: ${{ env.folder_exists == 'true' }}
         run: |
           DB="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db_image=$DB"
           echo "db_image=$DB" >> "$GITHUB_OUTPUT"
 
           
@@ -188,8 +190,8 @@ jobs:
     steps:
       - name: Deploy Services
         env:
-          DOCKER_IMAGE: ${{ needs.build.outputs.docker-image }}
-          DB_IMAGE: ${{ needs.build.outputs.db-image }}
+          DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
+          DB_IMAGE: ${{ needs.build.outputs.db_image }}
         run: |
           echo "Application Docker Image: $DOCKER_IMAGE"
           echo "Database Docker Image: $DB_IMAGE"
