@@ -173,6 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Services
+        id: debug
         env:
           DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
           DB_IMAGE: ${{ needs.build.outputs.db_image }}
@@ -262,6 +263,7 @@ jobs:
         run: |
           echo "Attempting to log in to Kubernetes cluster"
           kubectl get nodes
+
       - name: Validate Image Variables
         run: |
           if [ -z "${DOCKER_IMAGE}" ]; then
@@ -272,8 +274,8 @@ jobs:
             echo "Warning: DB_IMAGE is empty. Proceeding without DB deployment."
           fi
         env:
-          DOCKER_IMAGE: ${{ steps.debug.outputs.dockerimage }}
-          DB_IMAGE: ${{ steps.debug.outputs.db_image }}
+          DOCKER_IMAGE: ${{ steps.debug.outputs.DOCKER_IMAGE }}
+          DB_IMAGE: ${{ steps.debug.outputs.DB_IMAGE }}
         
       - name: Deploy Service
         run: |
