@@ -177,8 +177,8 @@ jobs:
           DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
           DB_IMAGE: ${{ needs.build.outputs.db_image }}
         run: |
-          echo "Application Docker Image: $DOCKER_IMAGE"
-          echo "Database Docker Image: $DB_IMAGE"
+          echo "$DOCKER_IMAGE"
+          echo "$DB_IMAGE"
 
       - name: Clone Deployment Repository
         uses: actions/checkout@v3
