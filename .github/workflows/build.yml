@@ -118,38 +118,38 @@ jobs:
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Generated Tag: $NEXT_TAG"
 
-      # - name: Build and Push Application Docker Image
-      #   id: build_push_docker
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     file: build/maven/Dockerfile
-      #     push: true
-      #     tags: |
-      #       ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
-      #     build-args: |
-      #       WORK_DIR=core-services/${{ matrix.service }}
+      - name: Build and Push Application Docker Image
+        id: build_push_docker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: build/maven/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+          build-args: |
+            WORK_DIR=core-services/${{ matrix.service }}
           
-      # - name: Check if DB folder exists
-      #   id: check-db-folder
-      #   run: |
-      #     FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
-      #     if [ -d "$FOLDER_PATH" ]; then
-      #       echo "folder_exists=true" >> $GITHUB_ENV
-      #     else
-      #       echo "folder_exists=false" >> $GITHUB_ENV
-      #     fi
+      - name: Check if DB folder exists
+        id: check-db-folder
+        run: |
+          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
+          if [ -d "$FOLDER_PATH" ]; then
+            echo "folder_exists=true" >> $GITHUB_ENV
+          else
+            echo "folder_exists=false" >> $GITHUB_ENV
+          fi
   
-      # - name: Build and Push Database Docker Image
-      #   if: ${{ env.folder_exists == 'true' }}
-      #   id: build_push_db_docker
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: core-services/${{ matrix.service }}/src/main/resources/db
-      #     file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
-      #     push: true
-      #     tags: |
-      #       ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+      - name: Build and Push Database Docker Image
+        if: ${{ env.folder_exists == 'true' }}
+        id: build_push_db_docker
+        uses: docker/build-push-action@v5
+        with:
+          context: core-services/${{ matrix.service }}/src/main/resources/db
+          file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
       - name: Save Application Docker Image
         id: save_docker_image
