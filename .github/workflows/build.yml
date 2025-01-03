@@ -55,8 +55,8 @@ jobs:
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
     runs-on: ubuntu-latest
     outputs:
-      docker-image: ${{ steps.save-docker-image.outputs.docker-image }}
-      db-image: ${{ steps.save-db-image.outputs.db-image || '' }}
+      docker-image1: ${{ steps.save-docker-image.outputs.docker-image }}
+      db-image1: ${{ steps.save-db-image.outputs.db-image || '' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
@@ -154,15 +154,17 @@ jobs:
       - name: Save Application Docker Image
         id: save-docker-image
         run: |
-          DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker-image=$DOCKER_IMAGE" >> $GITHUB_OUTPUT
+          DOCKER="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker-image=$DOCKER"
+          echo "docker-image=$DOCKER" >> $GITHUB_OUTPUT
           
       - name: Save Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: save-db-image
         run: |
-          DB_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db-image=$DB_IMAGE" >> $GITHUB_OUTPUT
+          DB="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db-image=$DB"
+          echo "db-image=$DB" >> $GITHUB_OUTPUT
           
       # - name: Set Docker Images in Artifacts
       #   run: |
@@ -190,8 +192,8 @@ jobs:
 
       - name: Use Docker Images
         run: |
-          echo "Application Docker Image: ${{ needs.build.outputs.docker-image }}"
-          echo "Database Docker Image: ${{ needs.build.outputs.db-image }}"
+          echo "DOCKER_IMAGE: ${{ needs.build.outputs.docker-image1 }}"
+          echo "DB_IMAGE: ${{ needs.build.outputs.db-image1 }}"
 
       # - name: Download Artifacts
       #   uses: actions/download-artifact@v3
