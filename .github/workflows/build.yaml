@@ -23,32 +23,19 @@ jobs:
         with:
           fetch-depth: 2  # Fetch the last two commits to allow HEAD~1
 
-      - name: Detect Changed Services
+      - name: Detect changed services
         id: detect
         run: |
-          # Get the list of changed files
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
-          
-          # Filter out unique top-level directories within 'core-services' and 'business-services'
-          CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^(core-services|business-services)/' | cut -d'/' -f2 | uniq)
-          
-          # Convert to a plain comma-separated string if there are any services
-          if [[ -z "$CHANGED_SERVICES" ]]; then
             CHANGED_SERVICES=""
-          else
-            CHANGED_SERVICES=$(echo "$CHANGED_SERVICES" | tr '\n' ',')
-            CHANGED_SERVICES=${CHANGED_SERVICES%,}  # Remove trailing comma
-          fi
-          
-          echo "Changed Services: $CHANGED_SERVICES"
-          
-          # Output the result as a valid JSON array
-          if [[ -n "$CHANGED_SERVICES" ]]; then
-            CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
-            echo "::set-output name=changed-services::$CHANGED_SERVICES_JSON"
-          else
-            echo "::set-output name=changed-services::[]"
-          fi
+            # Detect changed directories (core-services or business-services)
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^core-services/'; then
+                CHANGED_SERVICES="${CHANGED_SERVICES} core-services/"
+            fi
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^business-services/'; then
+                CHANGED_SERVICES="${CHANGED_SERVICES} business-services/"
+            fi
+            echo "Changed services: $CHANGED_SERVICES"
+            echo "::set-output name=services::${CHANGED_SERVICES}"
       - name: Debug Output
         run: |
           echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
@@ -66,6 +53,24 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Set WORK_DIR based on service
+        id: set_work_dir
+        run: |
+            echo "WORK_DIR=${{ matrix.service }}" >> $GITHUB_ENV
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Cache Docker layers
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -128,25 +133,25 @@ jobs:
           tags: |
             ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
-            WORK_DIR=core-services/${{ matrix.service }}
+            WORK_DIR=${{ env.WORK_DIR }}
           
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
-          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
-          if [ -d "$FOLDER_PATH" ]; then
+            DB_FOLDER_PATH="${{ matrix.service }}/src/main/resources/db"  # Dynamic DB path based on service
+            if [ -d "$DB_FOLDER_PATH" ]; then
             echo "folder_exists=true" >> $GITHUB_ENV
-          else
+            else
             echo "folder_exists=false" >> $GITHUB_ENV
-          fi
+            fi
   
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: build_push_db_docker
         uses: docker/build-push-action@v5
         with:
-          context: core-services/${{ matrix.service }}/src/main/resources/db
-          file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
+          context: ${{ matrix.service }}/src/main/resources/db  # Dynamic DB context path
+          file: ${{ matrix.service }}/src/main/resources/db/Dockerfile  # Dynamic DB Dockerfile path
           push: true
           tags: |
             ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
