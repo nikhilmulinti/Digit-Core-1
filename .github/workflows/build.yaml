@@ -45,14 +45,16 @@ jobs:
                 CHANGED_SERVICES="${CHANGED_SERVICES} ${SERVICE_PATH} "
             fi
             done
-
-            # Use the correct syntax to set output
-            echo "::set-output name=changed-services::${CHANGED_SERVICES}"
-  
+            # Output the result as a valid JSON array
+            if [[ -n "$CHANGED_SERVICES" ]]; then
+                CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
+                echo "::set-output name=changed-services::$CHANGED_SERVICES_JSON"
+            else
+                echo "::set-output name=changed-services::[]"
+            fi
       - name: Debug Output
         run: |
-            echo "::set-output name=root-folder::${ROOT_FOLDER}"
-            echo "::set-output name=changed-services::${CHANGED_SERVICES}"
+          echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
     
   build:
     needs: detect-changes
