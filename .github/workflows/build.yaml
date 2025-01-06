@@ -129,7 +129,7 @@ jobs:
             #   # Increment the numeric part of the latest tag
             #   TAG_NUMBER=$(echo "$LATEST_TAG" | awk -F- '{print $NF}')
             #   NEXT_TAG="${BRANCH}-${COMMIT_HASH}-$(TAG_NUMBER)"
-            # fi
+            fi
           fi
       
           # Export the next tag
