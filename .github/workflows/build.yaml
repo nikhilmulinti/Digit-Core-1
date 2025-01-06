@@ -29,8 +29,11 @@ jobs:
             # Initialize an empty string to hold the service paths
             CHANGED_SERVICES=""
 
-            # Detect changed directories under core-services and business-services
-            for changed_file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }}); do
+            # Fetch the latest changes in the repository (if needed)
+            git fetch --depth=2
+
+            # Get the diff of changed files between the previous commit and the current commit
+            for changed_file in $(git diff --name-only HEAD~1 HEAD); do
             # Check if the change is within core-services or business-services
             if [[ "$changed_file" =~ ^core-services/ ]]; then
                 # Extract the service path from core-services
@@ -43,12 +46,15 @@ jobs:
             fi
             done
 
+            # Output the changed services
             echo "Changed services: $CHANGED_SERVICES"
-            echo "::set-output name=services::${CHANGED_SERVICES}"
+
+            # Save the result to an environment variable for use in subsequent steps
+            echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
 
       - name: Debug Output
         run: |
-            echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
+            echo "Changed Services: ${{ env.CHANGED_SERVICES }}"
   
   build:
     needs: detect-changes

@@ -184,7 +184,6 @@
 					<outputKind>module</outputKind>
 				</configuration>
 			</plugin>
-
       
     </plugins>
     <pluginManagement>
