@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 2  # Fetch the last two commits to allow HEAD~1
 
       - name: Detect Changed Services
-        id: detect
+        id: detect-changes
         run: |
             # Initialize empty strings for root folder and changed services
             ROOT_FOLDER=""
@@ -49,11 +49,10 @@ jobs:
             echo "Root Folder: $ROOT_FOLDER"
             echo "Changed Services: ${CHANGED_SERVICES[@]}"
 
-            echo "changed-services=${CHANGED_SERVICES[@]}" >> $GITHUB_ENV
+            echo "changed-services=${CHANGED_SERVICES[@]}" >> $GITHUB_OUTPUT
             echo "::set-output name=changed-services::$(echo ${CHANGED_SERVICES[@]} | jq -R -s -c 'split(" ")')"
   
       - name: Debug Output
-        id: output
         run: |
             echo "Root Folder: ${{ env.ROOT_FOLDER }}"
             echo "Changed Services: ${{ env.CHANGED_SERVICES }}"
