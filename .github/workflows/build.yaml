@@ -46,11 +46,13 @@ jobs:
             fi
             done
 
+            # Output the root folder and changed services
             echo "Root Folder: $ROOT_FOLDER"
-            echo "Changed Services: ${CHANGED_SERVICES[@]}"
-
-            echo "changed-services=${CHANGED_SERVICES[@]}" >> $GITHUB_OUTPUT
-            echo "::set-output name=changed-services::$(echo ${CHANGED_SERVICES[@]} | jq -R -s -c 'split(" ")')"
+            echo "Changed Services: $CHANGED_SERVICES"
+            
+            # Save the results to environment variables for use in subsequent steps
+            echo "ROOT_FOLDER=${ROOT_FOLDER}" >> $GITHUB_ENV
+            echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
   
       - name: Debug Output
         run: |
