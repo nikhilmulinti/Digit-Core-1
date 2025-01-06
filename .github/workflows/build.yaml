@@ -47,12 +47,12 @@ jobs:
             done
 
             # Output the root folder and changed services
-            echo "Root Folder: $ROOT_FOLDER"
-            echo "Changed Services: $CHANGED_SERVICES"
+            echo "Root Folder: $ROOT_FOLDER" >> "$GITHUB_OUTPUT"
+            echo "Changed Services: $CHANGED_SERVICES" >> "$GITHUB_OUTPUT"
 
             # Save the results to environment variables for use in subsequent steps
-            echo "ROOT_FOLDER=${ROOT_FOLDER}" >> $GITHUB_ENV
-            echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
+            echo "ROOT_FOLDER=${ROOT_FOLDER}" 
+            echo "CHANGED_SERVICES=${CHANGED_SERVICES}" 
   
       - name: Debug Output
         run: |
