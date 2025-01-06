@@ -28,10 +28,13 @@ jobs:
         run: |
             CHANGED_SERVICES=""
             # Detect changed directories under core-services and business-services
-            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^core-services/'; then
+            CHANGED_CORE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^core-services/')
+            CHANGED_BUSINESS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^business-services/')
+        
+            if [[ -n "$CHANGED_CORE" ]]; then
                 CHANGED_SERVICES="${CHANGED_SERVICES} core-services/"
             fi
-            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^business-services/'; then
+            if [[ -n "$CHANGED_BUSINESS" ]]; then
                 CHANGED_SERVICES="${CHANGED_SERVICES} business-services/"
             fi
             echo "Changed services: $CHANGED_SERVICES"
