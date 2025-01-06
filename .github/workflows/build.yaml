@@ -58,13 +58,14 @@ jobs:
             echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
   
       - name: Debug Output
+        id: output
         run: |
             echo "Root Folder: ${{ env.ROOT_FOLDER }}"
             echo "Changed Services: ${{ env.CHANGED_SERVICES }}"
     
   build:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.changed-services != '' }}
+    if: ${{ fromJson(needs.detect-changes.outputs.changed-services).length > 0 }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
