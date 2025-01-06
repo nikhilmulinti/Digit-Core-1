@@ -140,36 +140,35 @@ jobs:
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Generated Tag: $NEXT_TAG"
 
-      # Build and Push Application Docker Image
       - name: Build and Push Application Docker Image
         id: build_push_docker
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: build/maven/Dockerfile
-          push: true
-          tags: |
-            ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
-          build-args: |
-            WORK_DIR=core-services/${{ matrix.service }}
-
+            context: .
+            file: build/maven/Dockerfile
+            push: true
+            tags: |
+                ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+            build-args: |
+                WORK_DIR=${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}
+            
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
-            DB_FOLDER_PATH="${{ matrix.service }}/src/main/resources/db"  # Dynamic DB path based on service
-            if [ -d "$DB_FOLDER_PATH" ]; then
-            echo "folder_exists=true" >> $GITHUB_ENV
+            FOLDER_PATH="${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db"
+            if [ -d "$FOLDER_PATH" ]; then
+                echo "folder_exists=true" >> $GITHUB_ENV
             else
-            echo "folder_exists=false" >> $GITHUB_ENV
+                echo "folder_exists=false" >> $GITHUB_ENV
             fi
-  
+    
       - name: Build and Push Database Docker Image
         if: ${{ env.folder_exists == 'true' }}
         id: build_push_db_docker
         uses: docker/build-push-action@v5
-        with:
-            context: ${{ env.SERVICE_PATH }}/src/main/resources/db  # Dynamic context for DB path
-            file: ${{ env.SERVICE_PATH }}/src/main/resources/db/Dockerfile  # Dynamic Dockerfile path for DB
+        with:   
+            context: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db
+            file: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db/Dockerfile
             push: true
             tags: |
                 ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
