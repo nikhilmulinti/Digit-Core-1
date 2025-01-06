@@ -365,3 +365,10 @@ jobs:
               --set global.domain="$DOMAIN_NAME"
           fi
         shell: /usr/bin/bash -e {0}
+        
+      - name: Cleanup Cloned Repository
+        if: always()  # Ensures this runs even if a previous step fails
+        run: |
+          echo "Cleaning up cloned repository..."
+          rm -rf $GITHUB_WORKSPACE
+          echo "Repository cleaned up."
