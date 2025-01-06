@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 2  # Fetch the last two commits to allow HEAD~1
 
       - name: Detect Changed Services
-        id: detect-changes
+        id: detect
         run: |
             # Initialize empty strings for root folder and changed services
             ROOT_FOLDER=""
@@ -49,7 +49,7 @@ jobs:
             # Output the root folder and changed services
             echo "Root Folder: $ROOT_FOLDER"
             echo "Changed Services: $CHANGED_SERVICES"
-            
+
             # Save the results to environment variables for use in subsequent steps
             echo "ROOT_FOLDER=${ROOT_FOLDER}" >> $GITHUB_ENV
             echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
