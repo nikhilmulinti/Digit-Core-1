@@ -51,8 +51,8 @@ jobs:
             echo "Changed Services: $CHANGED_SERVICES"
 
             # Save the results to environment variables for use in subsequent steps
-            echo "Root Folder=${ROOT_FOLDER}" >> "$GITHUB_OUTPUT"
-            echo "Changed Services=${CHANGED_SERVICES}" >> "$GITHUB_OUTPUT"
+            echo "Root Folder=${ROOT_FOLDER}" >> "$GITHUB_ENV"
+            echo "Changed Services=${CHANGED_SERVICES}" >> "$GITHUB_ENV"
   
       - name: Debug Output
         run: |
