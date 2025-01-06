@@ -59,7 +59,7 @@ jobs:
     
   build:
     needs: detect-changes
-    if: ${{ fromJson(needs.detect-changes.outputs.changed-services).length > 0 }}
+    if: ${{ needs.detect-changes.outputs.changed-services != '' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
