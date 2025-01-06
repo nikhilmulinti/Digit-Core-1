@@ -46,7 +46,9 @@ jobs:
                 CHANGED_SERVICES="${CHANGED_SERVICES} ${SERVICE_PATH} "
             fi
             done
-            echo root-folder=$ROOT_FOLDER
+            # Set the output for root-folder
+            echo "::set-output name=root-folder::$ROOT_FOLDER"
+            
             # Output the result as a valid JSON array
             if [[ -n "$CHANGED_SERVICES" ]]; then
                 CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
