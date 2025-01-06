@@ -16,7 +16,7 @@ jobs:
     name: Detect Changed Services
     runs-on: ubuntu-latest
     outputs:
-      changed-services: ${{ steps.detect.outputs.changed-services }}
+      changed-services: ${{ steps.output.outputs.changed-services }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -51,13 +51,14 @@ jobs:
             echo "Changed Services: $CHANGED_SERVICES"
 
             # Save the results to environment variables for use in subsequent steps
-            echo "Root Folder=${ROOT_FOLDER}" >> "$GITHUB_ENV"
-            echo "Changed Services=${CHANGED_SERVICES}" >> "$GITHUB_ENV"
+            echo "ROOT_FOLDER=${ROOT_FOLDER}" >> $GITHUB_ENV
+            echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
   
       - name: Debug Output
+        id: output
         run: |
-            echo "Root Folder: ${{ env.ROOT_FOLDER }}"
-            echo "Changed Services: ${{ env.CHANGED_SERVICES }}"
+            echo "Root Folder: ${{ env.ROOT_FOLDER }}" >> "$GITHUB_OUTPUT"
+            echo "changed services: ${{ env.CHANGED_SERVICES }}" >> "$GITHUB_OUTPUT"
     
   build:
     needs: detect-changes
