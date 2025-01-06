@@ -26,7 +26,8 @@ jobs:
       - name: Detect Changed Services
         id: detect
         run: |
-            # Initialize an empty string to hold the service paths
+            # Initialize empty strings for root folder and changed services
+            ROOT_FOLDER=""
             CHANGED_SERVICES=""
 
             # Fetch the latest changes in the repository (if needed)
@@ -36,26 +37,31 @@ jobs:
             for changed_file in $(git diff --name-only HEAD~1 HEAD); do
             # Check if the change is within core-services or business-services
             if [[ "$changed_file" =~ ^core-services/ ]]; then
-                # Extract the service path from core-services
+                # Set the root folder to core-services and extract the service path
+                ROOT_FOLDER="core-services"
                 SERVICE_PATH=$(echo "$changed_file" | cut -d/ -f2)  # Get the second part after core-services/
-                CHANGED_SERVICES="${CHANGED_SERVICES} core-services/${SERVICE_PATH} "
+                CHANGED_SERVICES="${CHANGED_SERVICES} ${SERVICE_PATH} "
             elif [[ "$changed_file" =~ ^business-services/ ]]; then
-                # Extract the service path from business-services
+                # Set the root folder to business-services and extract the service path
+                ROOT_FOLDER="business-services"
                 SERVICE_PATH=$(echo "$changed_file" | cut -d/ -f2)  # Get the second part after business-services/
-                CHANGED_SERVICES="${CHANGED_SERVICES} business-services/${SERVICE_PATH} "
+                CHANGED_SERVICES="${CHANGED_SERVICES} ${SERVICE_PATH} "
             fi
             done
 
-            # Output the changed services
-            echo "Changed services: $CHANGED_SERVICES"
+            # Output the root folder and changed services
+            echo "Root Folder: $ROOT_FOLDER"
+            echo "Changed Services: $CHANGED_SERVICES"
 
-            # Save the result to an environment variable for use in subsequent steps
+            # Save the results to environment variables for use in subsequent steps
+            echo "ROOT_FOLDER=${ROOT_FOLDER}" >> $GITHUB_ENV
             echo "CHANGED_SERVICES=${CHANGED_SERVICES}" >> $GITHUB_ENV
-
+  
       - name: Debug Output
         run: |
+            echo "Root Folder: ${{ env.ROOT_FOLDER }}"
             echo "Changed Services: ${{ env.CHANGED_SERVICES }}"
-  
+    
   build:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.changed-services != '[]' }}
@@ -69,20 +75,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
-      - name: Set WORK_DIR based on service
-        id: set_work_dir
-        run: |
-            # Handle business-services and core-services differently
-            if [[ "${{ matrix.service }}" == business-services/* ]]; then
-            SERVICE_PATH="${{ matrix.service }}"
-            elif [[ "${{ matrix.service }}" == core-services/* ]]; then
-            SERVICE_PATH="${{ matrix.service }}"
-            else
-            echo "Unknown service path"
-            exit 1
-            fi
-            echo "SERVICE_PATH=${SERVICE_PATH}" >> $GITHUB_ENV
 
       # Set up Docker Buildx
       - name: Set up Docker Buildx
@@ -159,7 +151,7 @@ jobs:
           tags: |
             ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
-            WORK_DIR=${{ env.SERVICE_PATH }}
+            WORK_DIR=core-services/${{ matrix.service }}
 
       - name: Check if DB folder exists
         id: check-db-folder
