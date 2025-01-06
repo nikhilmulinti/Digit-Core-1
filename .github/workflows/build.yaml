@@ -131,7 +131,7 @@ jobs:
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
             fi
           fi
- 
+
           # Export the next tag
           echo "::set-output name=tag::$NEXT_TAG"
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
