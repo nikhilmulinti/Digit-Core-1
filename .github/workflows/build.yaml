@@ -3,10 +3,7 @@ name: Dynamic Build and Deployment Pipeline
 on:
   push:
     branches:
-      - dev  # Trigger pipeline on changes pushed to the master branch
-  # workflow_dispatch:  # Allow manual triggering
-    # paths:
-    #   - 'core-services/**'  # Trigger only if files within 'core-services' change
+      - dev  # Trigger pipeline on changes pushed to the dev branch
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_ACCESS_TOKEN }}
@@ -46,9 +43,10 @@ jobs:
                 CHANGED_SERVICES="${CHANGED_SERVICES} ${SERVICE_PATH} "
             fi
             done
+
             # Set the output for root-folder
             echo "::set-output name=root-folder::$ROOT_FOLDER"
-            
+
             # Output the result as a valid JSON array
             if [[ -n "$CHANGED_SERVICES" ]]; then
                 CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
