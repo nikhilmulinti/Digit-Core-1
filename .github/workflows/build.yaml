@@ -26,29 +26,26 @@ jobs:
       - name: Detect Changed Services
         id: detect
         run: |
-            # Get the list of changed files
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
-            
-            # Filter out unique top-level directories within 'core-services' and 'business-services'
-            CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^(core-services|business-services)/' | cut -d'/' -f2 | uniq)
-            
-            # Convert to a plain comma-separated string if there are any services
-            if [[ -z "$CHANGED_SERVICES" ]]; then
-                CHANGED_SERVICES=""
-            else
-                CHANGED_SERVICES=$(echo "$CHANGED_SERVICES" | tr '\n' ',')
-                CHANGED_SERVICES=${CHANGED_SERVICES%,}  # Remove trailing comma
+            # Initialize an empty string to hold the service paths
+            CHANGED_SERVICES=""
+
+            # Detect changed directories under core-services and business-services
+            for changed_file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }}); do
+            # Check if the change is within core-services or business-services
+            if [[ "$changed_file" =~ ^core-services/ ]]; then
+                # Extract the service path from core-services
+                SERVICE_PATH=$(echo "$changed_file" | cut -d/ -f2)  # Get the second part after core-services/
+                CHANGED_SERVICES="${CHANGED_SERVICES} core-services/${SERVICE_PATH} "
+            elif [[ "$changed_file" =~ ^business-services/ ]]; then
+                # Extract the service path from business-services
+                SERVICE_PATH=$(echo "$changed_file" | cut -d/ -f2)  # Get the second part after business-services/
+                CHANGED_SERVICES="${CHANGED_SERVICES} business-services/${SERVICE_PATH} "
             fi
-            
-            echo "Changed Services: $CHANGED_SERVICES"
-            
-            # Output the result as a valid JSON array
-            if [[ -n "$CHANGED_SERVICES" ]]; then
-                CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
-                echo "::set-output name=changed-services::$CHANGED_SERVICES_JSON"
-            else
-                echo "::set-output name=changed-services::[]"
-            fi
+            done
+
+            echo "Changed services: $CHANGED_SERVICES"
+            echo "::set-output name=services::${CHANGED_SERVICES}"
+
       - name: Debug Output
         run: |
             echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
