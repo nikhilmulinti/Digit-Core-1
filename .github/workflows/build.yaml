@@ -23,22 +23,32 @@ jobs:
         with:
           fetch-depth: 2  # Fetch the last two commits to allow HEAD~1
 
-      - name: Detect changed services
+      - name: Detect Changed Services
         id: detect
         run: |
-            CHANGED_SERVICES=""
-            # Detect changed directories under core-services and business-services
-            CHANGED_CORE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^core-services/')
-            CHANGED_BUSINESS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^business-services/')
-        
-            if [[ -n "$CHANGED_CORE" ]]; then
-                CHANGED_SERVICES="${CHANGED_SERVICES} core-services/"
+            # Get the list of changed files
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
+            
+            # Filter out unique top-level directories within 'core-services' and 'business-services'
+            CHANGED_SERVICES=$(echo "$CHANGED_FILES" | grep -E '^(core-services|business-services)/' | cut -d'/' -f2 | uniq)
+            
+            # Convert to a plain comma-separated string if there are any services
+            if [[ -z "$CHANGED_SERVICES" ]]; then
+                CHANGED_SERVICES=""
+            else
+                CHANGED_SERVICES=$(echo "$CHANGED_SERVICES" | tr '\n' ',')
+                CHANGED_SERVICES=${CHANGED_SERVICES%,}  # Remove trailing comma
             fi
-            if [[ -n "$CHANGED_BUSINESS" ]]; then
-                CHANGED_SERVICES="${CHANGED_SERVICES} business-services/"
+            
+            echo "Changed Services: $CHANGED_SERVICES"
+            
+            # Output the result as a valid JSON array
+            if [[ -n "$CHANGED_SERVICES" ]]; then
+                CHANGED_SERVICES_JSON="[\"$(echo $CHANGED_SERVICES | sed 's/,/","/g')\"]"
+                echo "::set-output name=changed-services::$CHANGED_SERVICES_JSON"
+            else
+                echo "::set-output name=changed-services::[]"
             fi
-            echo "Changed services: $CHANGED_SERVICES"
-            echo "::set-output name=services::${CHANGED_SERVICES}"
       - name: Debug Output
         run: |
             echo "Changed Services: ${{ steps.detect.outputs.changed-services }}"
