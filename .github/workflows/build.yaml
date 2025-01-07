@@ -169,17 +169,17 @@ jobs:
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
-          DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker_image=$DOCKER"
-          echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
+          DOCKER_IMAGE="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker_image=$DOCKER_IMAGE"
+          echo "docker_image=$DOCKER_IMAGE" >> docker-image.txt
           
       - name: Save Database Docker Image
         id: save_db_image
         if: ${{ env.folder_exists == 'true' }}
         run: |
-          DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db_image=$DB"
-          echo "db_image=$DB" >> "$GITHUB_OUTPUT"
+          DB_IMAGE="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db_image=$DB_IMAGE"
+          echo "db_image=$DB_IMAGE" >> db-image.txt
         
       - name: Set Docker Images in Artifacts
         run: |
@@ -187,10 +187,9 @@ jobs:
           mkdir -p ./artifacts
           
           # Set the Docker image values
-          echo "$DOCKER" > ./artifacts/docker-image.txt
-          echo "$DB" > ./artifacts/db-image.txt
+          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
+          echo "$DB_IMAGE" > ./artifacts/db-image.txt
         shell: /usr/bin/bash -e {0}
-          
           
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -199,10 +198,6 @@ jobs:
           path: |
             docker-image.txt
             db-image.txt
-      - name: Debug Outputs
-        run: |
-          echo "Docker Image: ${{ steps.save-docker-image.outputs.docker_image }}"
-            echo "DB Image: ${{ steps.save-db-image.outputs.db_image }}"
 
       # - name: Save Application Docker Image
       #   id: save_docker_image
