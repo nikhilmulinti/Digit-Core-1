@@ -174,7 +174,23 @@ jobs:
           # Set the Docker image values
           echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
           echo "$DB_IMAGE" > ./artifacts/db-image.txt
+        shell: /usr/bin/bash -e {0}
+        env:
+          NEXT_TAG: master-e410a69-1
+          folder_exists: false
         
+        
+      - name: Set Docker Images in Artifacts
+        run: |
+          # Create the artifacts directory if it doesn't exist
+          mkdir -p ./artifacts
+          
+          # Set the Docker image values
+          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
+          echo "$DB_IMAGE" > ./artifacts/db-image.txt
+        shell: /usr/bin/bash -e {0}
+          
+          
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -182,6 +198,10 @@ jobs:
           path: |
             docker-image.txt
             db-image.txt
+      - name: Debug Outputs
+        run: |
+          echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
+            echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
 
       # - name: Save Application Docker Image
       #   id: save_docker_image
