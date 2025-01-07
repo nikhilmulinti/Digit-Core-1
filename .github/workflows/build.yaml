@@ -166,28 +166,29 @@ jobs:
             tags: |
                 ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
 
+      - name: Save Application Docker Image
+        id: save_docker_image
+        run: |
+          DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker_image=$DOCKER"
+          echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
+          
+      - name: Save Database Docker Image
+        id: save_db_image
+        if: ${{ env.folder_exists == 'true' }}
+        run: |
+          DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db_image=$DB"
+          echo "db_image=$DB" >> "$GITHUB_OUTPUT"
+        
       - name: Set Docker Images in Artifacts
         run: |
           # Create the artifacts directory if it doesn't exist
           mkdir -p ./artifacts
           
           # Set the Docker image values
-          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
-          echo "$DB_IMAGE" > ./artifacts/db-image.txt
-        shell: /usr/bin/bash -e {0}
-        env:
-          NEXT_TAG: master-e410a69-1
-          folder_exists: false
-        
-        
-      - name: Set Docker Images in Artifacts
-        run: |
-          # Create the artifacts directory if it doesn't exist
-          mkdir -p ./artifacts
-          
-          # Set the Docker image values
-          echo "$DOCKER_IMAGE" > ./artifacts/docker-image.txt
-          echo "$DB_IMAGE" > ./artifacts/db-image.txt
+          echo "$DOCKER" > ./artifacts/docker-image.txt
+          echo "$DB" > ./artifacts/db-image.txt
         shell: /usr/bin/bash -e {0}
           
           
@@ -200,8 +201,8 @@ jobs:
             db-image.txt
       - name: Debug Outputs
         run: |
-          echo "Docker Image: ${{ steps.save-docker-image.outputs.docker-image }}"
-            echo "DB Image: ${{ steps.save-db-image.outputs.db-image }}"
+          echo "Docker Image: ${{ steps.save-docker-image.outputs.docker_image }}"
+            echo "DB Image: ${{ steps.save-db-image.outputs.db_image }}"
 
       # - name: Save Application Docker Image
       #   id: save_docker_image
