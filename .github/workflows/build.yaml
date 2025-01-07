@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - dev  # Trigger pipeline on changes pushed to the dev branch
-  workflow_dispatch: 
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_ACCESS_TOKEN }}
@@ -126,10 +125,6 @@ jobs:
             if [ -z "$LATEST_TAG" ]; then
               # No tag exists for this branch and commit hash
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
-            # else
-            #   # Increment the numeric part of the latest tag
-            #   TAG_NUMBER=$(echo "$LATEST_TAG" | awk -F- '{print $NF}')
-            #   NEXT_TAG="${BRANCH}-${COMMIT_HASH}-$(TAG_NUMBER)"
             fi
           fi
       
@@ -185,13 +180,12 @@ jobs:
           DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
           echo "db_image=$DB"
           echo "db_image=$DB" >> "$GITHUB_OUTPUT"
-
         
   Deploy:
     name: Deploy Job
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }} # Only triggers manually
     env:
       DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
       DB_IMAGE: ${{ needs.build.outputs.db_image }}
