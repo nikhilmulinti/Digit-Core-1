@@ -216,6 +216,8 @@ jobs:
 
       - name: Decrypt secrets file (without applying to cluster)
         run: |
+          # Checkout the unified-env-lts branch
+          git checkout unified-env-lts
           SECRETS_FILE="./deploy-as-code/helm/environments/unified-dev-secrets.yaml"
           echo "Decrypting secrets file: ${SECRETS_FILE}"
           
