@@ -154,7 +154,6 @@
         </configuration>
       </plugin>
       
-      
       			<plugin>
 				<groupId>cz.habarta.typescript-generator</groupId>
 				<artifactId>typescript-generator-maven-plugin</artifactId>
