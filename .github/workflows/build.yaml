@@ -229,6 +229,32 @@ jobs:
           # Optionally, print the decrypted content to verify
           cat $SECRETS_FILE | grep "admin-email"
 
+      # Step 6: Deploy Secrets and Configs
+      - name: Deploy Secrets and Configs
+        run: |
+          echo "Deploying secrets and cluster configurations..."
+          CONFIGS_DIR="./deploy-as-code/helm/charts/cluster-configs"
+          SECRETS_FILE="${CONFIGS_DIR}/secrets/unified-dev-secrets.yaml"
+
+          if [ ! -f "$SECRETS_FILE" ]; then
+            echo "Error: Secrets file $SECRETS_FILE does not exist"
+            exit 1
+          fi
+
+          echo "Applying secrets..."
+          kubectl apply -f "$SECRETS_FILE"
+
+          echo "Applying cluster configuration files..."
+          for resource in secrets services ingress configmaps; do
+            RESOURCE_DIR="$CONFIGS_DIR/$resource"
+            if [ -d "$RESOURCE_DIR" ]; then
+              kubectl apply -f "$RESOURCE_DIR" --recursive
+              echo "Applied configurations from $RESOURCE_DIR"
+            else
+              echo "No configurations found for $resource"
+            fi
+          done
+
       # - name: Checkout Branch for Environment File and Helm Charts
       #   run: |
       #     # Checkout the unified-env-lts branch
