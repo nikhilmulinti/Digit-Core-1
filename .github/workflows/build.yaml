@@ -182,7 +182,7 @@ jobs:
           echo "db_image=$DB"
           echo "db_image=$DB" >> "$GITHUB_OUTPUT"
         
-  Deploy:
+  unified-dev-Deploy:
     needs: build
     runs-on: ubuntu-latest
     environment: 
@@ -275,7 +275,7 @@ jobs:
       - name: Verify Cluster Login
         run: |
           echo "Attempting to log in to Kubernetes cluster"
-          kubectl get nodes
+          kubectl config current-context
       - name: Validate Image Variables
         run: |
           if [ -z "${DOCKER_IMAGE}" ]; then
