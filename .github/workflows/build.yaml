@@ -184,6 +184,8 @@ jobs:
   Deploy:
     needs: build
     runs-on: ubuntu-latest
+    environment: 
+      name: Dev # Maps to the Dev environment in GitHub settings
     env:
       DOCKER_IMAGE: ${{ needs.build.outputs.docker_image }}
       DB_IMAGE: ${{ needs.build.outputs.db_image }}
