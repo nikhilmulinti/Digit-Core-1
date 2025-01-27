@@ -202,36 +202,36 @@ jobs:
           
       - name: Install SOPS (if not installed)
         run: |
-        echo "Checking if SOPS is installed..."
-        if ! command -v sops &> /dev/null; then
-            echo "SOPS not found. Installing..."
-            
-            # Fetch the latest SOPS version
-            SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "\Kv[0-9.]+')
-            if [ -z "$SOPS_LATEST_VERSION" ]; then
-                echo "Failed to fetch the latest SOPS version. Exiting."
-                exit 1
-            fi
-            
-            # Download the .deb file
-            curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION#v}_amd64.deb"
-            if [ $? -ne 0 ]; then
-                echo "Failed to download the SOPS .deb file. Exiting."
-                exit 1
-            fi
-            
-            # Install the downloaded package
-            sudo apt-get update
-            sudo apt --fix-broken install -y ./sops.deb
-            if [ $? -ne 0 ]; then
-                echo "Failed to install SOPS. Exiting."
-                exit 1
-            fi
-            
-            echo "SOPS installation completed successfully."
-        else
-            echo "SOPS is already installed."
-        fi
+          echo "Checking if SOPS is installed..."
+          if ! command -v sops &> /dev/null; then
+          echo "SOPS not found. Installing..."
+          
+          # Fetch the latest SOPS version
+          SOPS_LATEST_VERSION=$(curl -s "https://api.github.com/repos/getsops/sops/releases/latest" | grep -Po '"tag_name": "\Kv[0-9.]+')
+          if [ -z "$SOPS_LATEST_VERSION" ]; then
+              echo "Failed to fetch the latest SOPS version. Exiting."
+              exit 1
+          fi
+          
+          # Download the .deb file
+          curl -Lo sops.deb "https://github.com/getsops/sops/releases/download/${SOPS_LATEST_VERSION}/sops_${SOPS_LATEST_VERSION#v}_amd64.deb"
+          if [ $? -ne 0 ]; then
+              echo "Failed to download the SOPS .deb file. Exiting."
+              exit 1
+          fi
+          
+          # Install the downloaded package
+          sudo apt-get update
+          sudo apt --fix-broken install -y ./sops.deb
+          if [ $? -ne 0 ]; then
+              echo "Failed to install SOPS. Exiting."
+              exit 1
+          fi
+          
+          echo "SOPS installation completed successfully."
+      else
+          echo "SOPS is already installed."
+      fi
 
       - name: Decrypt secrets file (without applying to cluster)
         run: |
