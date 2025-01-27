@@ -330,14 +330,6 @@ jobs:
             exit 1
           fi
           kubectl apply -f $SECRETS_FILE
-          SECRETS_NAME=$(yq e '.metadata.name' $SECRETS_FILE)
-          NAMESPACE=$(yq e '.metadata.namespace' $SECRETS_FILE)
-          if kubectl get secret "$SECRETS_NAME" -n "$NAMESPACE" &>/dev/null; then
-            echo "Secrets successfully deployed to namespace: $NAMESPACE"
-          else
-            echo "Error: Failed to deploy secrets."
-            exit 1
-          fi
 
       - name: Deploy Service
         run: |
