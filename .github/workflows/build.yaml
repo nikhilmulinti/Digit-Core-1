@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev  # Trigger pipeline on changes pushed to the dev branch
+  workflow_dispatch:  # Allows manual trigger for deployment jobs
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_ACCESS_TOKEN }}
