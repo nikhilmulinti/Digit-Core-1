@@ -71,7 +71,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-        
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2        
 
@@ -151,7 +151,7 @@ jobs:
             build-args: |
                 WORK_DIR=${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}
             platform: linux/amd64,linux/arm64
-            output: type=docker    
+            output: type=registry    
             
       - name: Check if DB folder exists
         id: check-db-folder
@@ -174,7 +174,7 @@ jobs:
             tags: |
                 ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
             platform: linux/amd64,linux/arm64
-            output: type=docker    
+            output: type=registry    
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
