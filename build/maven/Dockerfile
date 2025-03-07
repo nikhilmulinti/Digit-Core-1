@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM maven:3.9.6-amazoncorretto-17 AS build
+FROM maven:3.9.6-amazoncorretto-17 AS build
 ARG WORK_DIR
 WORKDIR /app
 
@@ -10,8 +10,8 @@ COPY ${WORK_DIR}/src ./src
 # Build the project
 RUN mvn -B -f /app/pom.xml package
 
-# Runtime image - Use the dynamically selected platform
-FROM --platform=$TARGETPLATFORM amazoncorretto:17-alpine
+# Runtime image – using a multi-arch base image
+FROM amazoncorretto:17-alpine
 
 WORKDIR /opt/egov
 
