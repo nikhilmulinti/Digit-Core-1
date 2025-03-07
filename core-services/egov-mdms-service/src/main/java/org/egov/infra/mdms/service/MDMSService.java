@@ -34,7 +34,7 @@ public class MDMSService {
 		log.info(" Incoming tenantid : " + tenantId);
 		
 		/* 
-		 * local tenantId replica for backtracking to parent tenant when child tenant is empty
+		 * local tenantId replicas for backtracking to parent tenant when child tenant is empty
 		 */
 		String tenantIdWithData = tenantId;
 
