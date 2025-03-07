@@ -147,6 +147,8 @@ jobs:
                 ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
             build-args: |
                 WORK_DIR=${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}
+            platform: linux/amd64,linux/arm64
+            output: type=docker    
             
       - name: Check if DB folder exists
         id: check-db-folder
@@ -168,6 +170,8 @@ jobs:
             push: true
             tags: |
                 ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+            platform: linux/amd64,linux/arm64
+            output: type=docker    
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
