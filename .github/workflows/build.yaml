@@ -3,7 +3,8 @@ name: Dynamic Build and Deployment Pipeline
 on:
   push:
     branches:
-      - dev  # Trigger pipeline on changes pushed to the dev branch
+      - dev
+      - docker-arm-update  # Trigger pipeline on changes pushed to the dev branch
   workflow_dispatch:  # Allows manual trigger for deployment jobs
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
