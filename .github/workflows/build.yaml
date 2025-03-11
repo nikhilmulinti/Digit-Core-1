@@ -141,56 +141,61 @@ jobs:
           echo "Generated Tag: $NEXT_TAG"
           echo "ma"
 
-      - name: Build and Push Application Docker Image
-        id: build_push_docker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: build/maven/Dockerfile
-          push: true
-          tags: |
-              ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
-          build-args: |
-                WORK_DIR=${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}
-          platforms: linux/arm64
-          output: type=registry    
+      # - name: Build and Push Application Docker Image
+      #   id: build_push_docker
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     file: build/maven/Dockerfile
+      #     push: true
+      #     tags: |
+      #         ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+      #     build-args: |
+      #           WORK_DIR=${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}
+      #     platforms: linux/arm64
+      #     output: type=registry    
             
-      - name: Check if DB folder exists
-        id: check-db-folder
+      - name: Verify Docker Buildx installation
         run: |
-            FOLDER_PATH="${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db"
-            if [ -d "$FOLDER_PATH" ]; then
-                echo "folder_exists=true" >> $GITHUB_ENV
-            else
-                echo "folder_exists=false" >> $GITHUB_ENV
-            fi
+          docker buildx version
+          docker buildx ls
+
+      # - name: Check if DB folder exists
+      #   id: check-db-folder
+      #   run: |
+      #       FOLDER_PATH="${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db"
+      #       if [ -d "$FOLDER_PATH" ]; then
+      #           echo "folder_exists=true" >> $GITHUB_ENV
+      #       else
+      #           echo "folder_exists=false" >> $GITHUB_ENV
+      #       fi
     
-      - name: Build and Push Database Docker Image
-        if: ${{ env.folder_exists == 'true' }}
-        id: build_push_db_docker
-        uses: docker/build-push-action@v5
-        with:   
-          context: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db
-          file: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db/Dockerfile
-          push: true
-          tags: |
-              ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
-          platforms: linux/arm64
-          output: type=registry    
-      - name: Save Application Docker Image
-        id: save_docker_image
-        run: |
-          DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker_image=$DOCKER"
-          echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
+      # - name: Build and Push Database Docker Image
+      #   if: ${{ env.folder_exists == 'true' }}
+      #   id: build_push_db_docker
+      #   uses: docker/build-push-action@v5
+      #   with:   
+      #     context: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db
+      #     file: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db/Dockerfile
+      #     push: true
+      #     tags: |
+      #         ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
+      #     platforms: linux/arm64
+      #     output: type=registry    
+      # - name: Save Application Docker Image
+      #   id: save_docker_image
+      #   run: |
+      #     DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+      #     echo "docker_image=$DOCKER"
+      #     echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
           
-      - name: Save Database Docker Image
-        id: save_db_image
-        if: ${{ env.folder_exists == 'true' }}
-        run: |
-          DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db_image=$DB"
-          echo "db_image=$DB" >> "$GITHUB_OUTPUT"
+      # - name: Save Database Docker Image
+      #   id: save_db_image
+      #   if: ${{ env.folder_exists == 'true' }}
+      #   run: |
+      #     DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+      #     echo "db_image=$DB"
+      #     echo "db_image=$DB" >> "$GITHUB_OUTPUT"
         
   unified-dev-Deploy:
     needs: build
