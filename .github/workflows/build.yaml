@@ -134,24 +134,24 @@ jobs:
           docker buildx version
           docker buildx ls
 
-      - name: Build MDMS Docker Image
-        run: |
-          docker build \
-            --platform linux/arm64 \
-            --tag egov-mdms-service \
-            --build-arg WORK_DIR=core-services/egov-mdms-service \
-            --file build/maven/Dockerfile \
-            .
+      # - name: Build MDMS Docker Image
+      #   run: |
+      #     docker build \
+      #       --platform linux/arm64 \
+      #       --tag egov-mdms-service \
+      #       --build-arg WORK_DIR=core-services/egov-mdms-service \
+      #       --file build/maven/Dockerfile \
+      #       .
 
-      - name: Push MDMS Docker Image to Docker Hub
-        id: push_mdms
-        run: |
-          docker login -u ${{ env.DOCKER_USERNAME }} -p ${{ env.DOCKER_PASSWORD }}
-          IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/egov-mdms-service:${{ github.sha }}
-          docker tag egov-mdms-service $IMAGE_TAG
-          docker push $IMAGE_TAG
-          echo "Docker Image pushed: $IMAGE_TAG"
-          echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+      # - name: Push MDMS Docker Image to Docker Hub
+      #   id: push_mdms
+      #   run: |
+      #     docker login -u ${{ env.DOCKER_USERNAME }} -p ${{ env.DOCKER_PASSWORD }}
+      #     IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/egov-mdms-service:${{ github.sha }}
+      #     docker tag egov-mdms-service $IMAGE_TAG
+      #     docker push $IMAGE_TAG
+      #     echo "Docker Image pushed: $IMAGE_TAG"
+      #     echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Build audit-service Docker image
         run: |
@@ -177,7 +177,7 @@ jobs:
             --platform linux/arm64 \
             --tag audit-service-db \
             --build-arg WORK_DIR=core-services/audit-service-db \
-            --file build/maven/Dockerfile \
+            --file core-services/audit-service/src/main/resources/db/Dockerfile \
             .
 
       - name: Push audit-service db Docker Image to Docker Hub
