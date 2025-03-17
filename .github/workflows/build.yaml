@@ -179,7 +179,6 @@ jobs:
             --build-arg WORK_DIR=core-services/audit-service-db \
             --file core-services/audit-service/src/main/resources/db/Dockerfile \
             core-services/audit-service/src/main/resources/db
-            .
 
       - name: Push audit-service db Docker Image to Docker Hub
         id: push_audit_db
