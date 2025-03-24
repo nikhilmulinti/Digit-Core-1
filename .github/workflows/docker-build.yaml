@@ -86,11 +86,14 @@ jobs:
 
       - name: Build audit-service Docker image
         run: |
-          docker build \
+          docker buildx build \
             --platform linux/arm64 \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
             --tag audit-service \
             --build-arg WORK_DIR=core-services/audit-service \
             --file build/maven/Dockerfile \
+            --load \
             .
 
       - name: Push audit-service Docker Image to Docker Hub
@@ -105,11 +108,14 @@ jobs:
 
       - name: Build audit-service db Docker image
         run: |
-          docker build \
+          docker buildx build \
             --platform linux/arm64 \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
             --tag audit-service-db \
             --build-arg WORK_DIR=core-services/audit-service-db \
             --file core-services/audit-service/src/main/resources/db/Dockerfile \
+            --load \
             core-services/audit-service/src/main/resources/db
 
       - name: Push audit-service db Docker Image to Docker Hub
