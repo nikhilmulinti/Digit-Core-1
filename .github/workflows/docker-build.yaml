@@ -18,14 +18,17 @@ jobs:
       matrix:
         service: [ "audit-service" ]
     outputs:
-      docker_image: ${{ steps.push_audit.outputs.docker_image }}
-      db_image: ${{ steps.push_audit_db.outputs.db_image }}
+      docker_image: ${{ steps.set_outputs.outputs.docker_image }}
+      db_image: ${{ steps.set_outputs.outputs.db_image }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2        
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -41,35 +44,28 @@ jobs:
             ${{ runner.os }}-buildx-${{ matrix.service }}-
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+        run: |
+          echo "${{ secrets.DOCKER_ACCESS_TOKEN }}" | docker login -u ${{ vars.DOCKER_USERNAME }} --password-stdin
 
       - name: Generate the Next Tag
         id: tag
         run: |
           echo "Generating the next tag for service: ${{ matrix.service }}"
-          # Set variables
           BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME=${{ matrix.service }}
-          # Log in to Docker Hub and fetch a token
           TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
             -H "Content-Type: application/json" \
-            -d '{"username": "'$DOCKER_USERNAME'", "password": "'$DOCKER_PASSWORD'"}' | jq -r .token)
-          # Check if the repository exists
+            -d '{"username": "'${{ vars.DOCKER_USERNAME }}'", "password": "'${{ secrets.DOCKER_ACCESS_TOKEN }}'"}' | jq -r .token)
           REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/")
+            "https://hub.docker.com/v2/repositories/${{ vars.DOCKER_USERNAME }}/$SERVICE_NAME/")
           if [ "$REPO_CHECK" -ne 200 ]; then
             echo "Repository does not exist. Assuming a first-time build."
             NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
           else
-            # Fetch existing tags for the service
             EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
-              "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-            # Filter for the current branch and commit hash
+              "https://hub.docker.com/v2/repositories/${{ vars.DOCKER_USERNAME }}/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
             LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}" | sort -V )
             if [ -z "$LATEST_TAG" ]; then
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
@@ -79,51 +75,35 @@ jobs:
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Generated Tag: $NEXT_TAG"
 
-      - name: Verify Docker Buildx installation
-        run: |
-          docker buildx version
-          docker buildx ls
+      - name: Verify Buildctl installation
+        run: buildctl --version
 
-      - name: Build audit-service Docker image
+      - name: Build and Push audit-service Docker image with buildctl
         run: |
-          docker buildx build \
-            --platform linux/arm64 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-            --tag audit-service \
-            --build-arg WORK_DIR=core-services/audit-service \
-            --file build/maven/Dockerfile \
-            --load \
-            .
+          buildctl build \
+            --frontend dockerfile.v0 \
+            --local context=. \
+            --local dockerfile=build/maven \
+            --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }},push=true \
+            --opt platform=linux/arm64 \
+            --opt build-arg:WORK_DIR=core-services/audit-service \
+            --import-cache type=local,src=/tmp/.buildx-cache \
+            --export-cache type=local,dest=/tmp/.buildx-cache,mode=max
 
-      - name: Push audit-service Docker Image to Docker Hub
-        id: push_audit
+      - name: Build and Push audit-service db Docker image with buildctl
         run: |
-          docker login -u ${{ env.DOCKER_USERNAME }} -p ${{ env.DOCKER_PASSWORD }}
-          IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }}
-          docker tag audit-service $IMAGE_TAG
-          docker push $IMAGE_TAG
-          echo "Docker Image pushed: $IMAGE_TAG"
-          echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          buildctl build \
+            --frontend dockerfile.v0 \
+            --local context=core-services/audit-service/src/main/resources/db \
+            --local dockerfile=core-services/audit-service/src/main/resources/db \
+            --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }},push=true \
+            --opt platform=linux/arm64 \
+            --opt build-arg:WORK_DIR=core-services/audit-service-db \
+            --import-cache type=local,src=/tmp/.buildx-cache \
+            --export-cache type=local,dest=/tmp/.buildx-cache,mode=max
 
-      - name: Build audit-service db Docker image
+      - name: Set Outputs
+        id: set_outputs
         run: |
-          docker buildx build \
-            --platform linux/arm64 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-            --tag audit-service-db \
-            --build-arg WORK_DIR=core-services/audit-service-db \
-            --file core-services/audit-service/src/main/resources/db/Dockerfile \
-            --load \
-            core-services/audit-service/src/main/resources/db
-
-      - name: Push audit-service db Docker Image to Docker Hub
-        id: push_audit_db
-        run: |
-          docker login -u ${{ env.DOCKER_USERNAME }} -p ${{ env.DOCKER_PASSWORD }}
-          IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }}
-          docker tag audit-service-db $IMAGE_TAG
-          docker push $IMAGE_TAG
-          echo "Docker Image pushed: $IMAGE_TAG"
-          echo "db_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "docker_image=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "db_image=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }}" >> $GITHUB_OUTPUT
