@@ -13,7 +13,6 @@ env:
 
 jobs:
   build:
-    # runs-on: arc-runner-set
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,28 +26,29 @@ jobs:
 
       - name: Install BuildKit binaries
         run: |
-          # Download a specific BuildKit release (adjust version as needed)
           wget https://github.com/moby/buildkit/releases/download/v0.11.3/buildkit-v0.11.3.linux-amd64.tar.gz
           tar -xzvf buildkit-v0.11.3.linux-amd64.tar.gz
           chmod +x bin/buildkitd bin/buildctl
-          # Move binaries to current directory for easier use
+          # Move binaries to current directory for easier usage
           mv bin/buildkitd .
           mv bin/buildctl .
 
       - name: Start BuildKit daemon
         run: |
-          # Start buildkitd in the background, listening on TCP port 1234
-          nohup ./buildkitd --addr tcp://0.0.0.0:1234 > buildkitd.log 2>&1 &
-          # Wait for BuildKit to be available
-          for i in {1..10}; do
-            if nc -z localhost 1234; then
+          # Start buildkitd bound to 127.0.0.1:1234
+          nohup ./buildkitd --addr tcp://127.0.0.1:1234 > buildkitd.log 2>&1 &
+          echo "Waiting for BuildKit..."
+          # Wait up to 100 seconds (20 attempts x 5 seconds)
+          for i in {1..20}; do
+            if nc -z 127.0.0.1 1234; then
               echo "BuildKit is up"
               exit 0
             fi
-            echo "Waiting for BuildKit..."
-            sleep 3
+            echo "Waiting for BuildKit... attempt $i"
+            sleep 5
           done
-          echo "BuildKit did not start in time" >&2
+          echo "BuildKit did not start in time. Log contents:"
+          cat buildkitd.log
           exit 1
 
       - name: Buildctl Login to Docker Hub
@@ -56,7 +56,7 @@ jobs:
           ./buildctl login docker.io \
             --username "${{ vars.DOCKER_USERNAME }}" \
             --password "${{ secrets.DOCKER_ACCESS_TOKEN }}" \
-            --addr tcp://localhost:1234
+            --addr tcp://127.0.0.1:1234
 
       - name: Generate the Next Tag
         id: tag
@@ -65,7 +65,6 @@ jobs:
           BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME=${{ matrix.service }}
-          # A simplified tag scheme; you can add extra logic as needed.
           NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
           echo "::set-output name=tag::$NEXT_TAG"
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
@@ -77,7 +76,7 @@ jobs:
       - name: Build and Push audit-service Docker image with buildctl
         run: |
           ./buildctl build \
-            --addr tcp://localhost:1234 \
+            --addr tcp://127.0.0.1:1234 \
             --frontend dockerfile.v0 \
             --local context=. \
             --local dockerfile=build/maven \
@@ -88,7 +87,7 @@ jobs:
       - name: Build and Push audit-service db Docker image with buildctl
         run: |
           ./buildctl build \
-            --addr tcp://localhost:1234 \
+            --addr tcp://127.0.0.1:1234 \
             --frontend dockerfile.v0 \
             --local context=core-services/audit-service/src/main/resources/db \
             --local dockerfile=core-services/audit-service/src/main/resources/db \
