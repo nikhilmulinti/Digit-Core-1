@@ -25,13 +25,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install and Start containerd
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y containerd
-          sudo systemctl start containerd
-          sudo systemctl status containerd
-
       - name: Install BuildKit binaries
         run: |
           wget https://github.com/moby/buildkit/releases/download/v0.11.3/buildkit-v0.11.3.linux-amd64.tar.gz
@@ -39,9 +32,9 @@ jobs:
           chmod +x bin/buildkitd bin/buildctl
           mv bin/buildkitd bin/buildctl ./
 
-      - name: Start BuildKit daemon with containerd worker
+      - name: Start BuildKit daemon with OCI worker
         run: |
-          sudo nohup ./buildkitd --addr tcp://127.0.0.1:1234 --oci-worker=false --containerd-worker=true > buildkitd.log 2>&1 &
+          sudo nohup ./buildkitd --addr tcp://127.0.0.1:1234 --oci-worker=true > buildkitd.log 2>&1 &
           for i in {1..20}; do
             if nc -z 127.0.0.1 1234; then
               echo "BuildKit is up"
@@ -84,7 +77,7 @@ jobs:
             --frontend dockerfile.v0 \
             --local context=. \
             --local dockerfile=build/maven \
-            --output type=registry,name=${DOCKER_USERNAME}/audit-service:${{ github.sha }},push=true \
+            --output type=image,name=${DOCKER_USERNAME}/audit-service:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service
 
@@ -96,7 +89,7 @@ jobs:
             --frontend dockerfile.v0 \
             --local context=core-services/audit-service/src/main/resources/db \
             --local dockerfile=core-services/audit-service/src/main/resources/db \
-            --output type=registry,name=${DOCKER_USERNAME}/audit-service-db:${{ github.sha }},push=true \
+            --output type=image,name=${DOCKER_USERNAME}/audit-service-db:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service-db
 
