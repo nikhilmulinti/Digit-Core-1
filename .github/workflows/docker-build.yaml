@@ -35,10 +35,10 @@ jobs:
           mv bin/buildctl .
           echo "BuildKit binaries installed."
 
-      - name: Start BuildKit daemon
+      - name: Start BuildKit daemon as root
         run: |
-          echo "Starting buildkitd..."
-          nohup ./buildkitd --addr tcp://127.0.0.1:1234 > buildkitd.log 2>&1 &
+          echo "Starting buildkitd as root..."
+          sudo nohup ./buildkitd --addr tcp://127.0.0.1:1234 > buildkitd.log 2>&1 &
           echo "Waiting for BuildKit to be available..."
           for i in {1..20}; do
             if nc -z 127.0.0.1 1234; then
