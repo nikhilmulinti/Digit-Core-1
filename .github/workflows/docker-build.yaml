@@ -16,30 +16,25 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [ "audit-service" ]
+        service: ["audit-service"]
     outputs:
       docker_image: ${{ steps.set_outputs.outputs.docker_image }}
       db_image: ${{ steps.set_outputs.outputs.db_image }}
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install BuildKit binaries
         run: |
-          echo "Downloading BuildKit..."
           wget https://github.com/moby/buildkit/releases/download/v0.11.3/buildkit-v0.11.3.linux-amd64.tar.gz
           tar -xzvf buildkit-v0.11.3.linux-amd64.tar.gz
           chmod +x bin/buildkitd bin/buildctl
-          # Move binaries to current directory for easier access
-          mv bin/buildkitd .
-          mv bin/buildctl .
-          echo "BuildKit binaries installed."
+          mv bin/buildkitd bin/buildctl ./
 
-      - name: Start BuildKit daemon as root
+      - name: Start BuildKit daemon
         run: |
-          echo "Starting buildkitd as root..."
           sudo nohup ./buildkitd --addr tcp://127.0.0.1:1234 > buildkitd.log 2>&1 &
-          echo "Waiting for BuildKit to be available..."
           for i in {1..20}; do
             if nc -z 127.0.0.1 1234; then
               echo "BuildKit is up"
@@ -54,60 +49,50 @@ jobs:
 
       - name: Configure Docker credentials for BuildKit
         run: |
-          echo "Configuring Docker credentials..."
           mkdir -p ~/.docker
-          # Create the auth string as base64(username:password)
-          AUTH=$(echo -n "${{ vars.DOCKER_USERNAME }}:${{ secrets.DOCKER_ACCESS_TOKEN }}" | base64 | tr -d '\n')
+          AUTH=$(echo -n "$DOCKER_USERNAME:$DOCKER_PASSWORD" | base64)
           cat <<EOF > ~/.docker/config.json
-{
-  "auths": {
-    "docker.io": {
-      "auth": "$AUTH"
-    }
-  }
-}
-EOF
-          echo "Docker credentials configured."
+          {
+            "auths": {
+              "docker.io": {"auth": "$AUTH"}
+            }
+          }
+          EOF
 
-      - name: Generate the Next Tag
+      - name: Generate Tag
         id: tag
         run: |
-          echo "Generating tag for service: ${{ matrix.service }}"
           BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
-          SERVICE_NAME=${{ matrix.service }}
-          NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
-          echo "::set-output name=tag::$NEXT_TAG"
-          echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
-          echo "Generated Tag: $NEXT_TAG"
+          echo "tag=${BRANCH}-${COMMIT_HASH}" >> $GITHUB_OUTPUT
 
       - name: Verify Buildctl installation
         run: ./buildctl --version
 
-      - name: Build and Push audit-service Docker image with buildctl
+      - name: Build and Push Audit Service Docker image
         run: |
           ./buildctl build \
             --addr tcp://127.0.0.1:1234 \
             --frontend dockerfile.v0 \
             --local context=. \
             --local dockerfile=build/maven \
-            --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }},push=true \
+            --output type=registry,name=${DOCKER_USERNAME}/audit-service:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service
 
-      - name: Build and Push audit-service db Docker image with buildctl
+      - name: Build and Push Audit Service DB Docker image
         run: |
           ./buildctl build \
             --addr tcp://127.0.0.1:1234 \
             --frontend dockerfile.v0 \
             --local context=core-services/audit-service/src/main/resources/db \
             --local dockerfile=core-services/audit-service/src/main/resources/db \
-            --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }},push=true \
+            --output type=registry,name=${DOCKER_USERNAME}/audit-service-db:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service-db
 
       - name: Set Outputs
         id: set_outputs
         run: |
-          echo "docker_image=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "db_image=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "docker_image=${DOCKER_USERNAME}/audit-service:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "db_image=${DOCKER_USERNAME}/audit-service-db:${{ github.sha }}" >> $GITHUB_OUTPUT
