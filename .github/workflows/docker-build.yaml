@@ -1,4 +1,4 @@
-name: Build Pipeline
+name: Build Pipeline Without Docker Daemon
 
 on:
   push:
@@ -14,13 +14,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Run BuildKit as a service container. This container runs the buildkitd daemon.
-    services:
-      buildkit:
-        image: moby/buildkit:buildx-stable-1
-        options: --privileged
-        ports:
-          - 1234:1234
     strategy:
       matrix:
         service: [ "audit-service" ]
@@ -31,79 +24,74 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Wait for BuildKit service to be available
+      - name: Install BuildKit binaries
         run: |
-          for i in {1..10}; do
-            if nc -z localhost 1234; then
-              echo "BuildKit service is up"
+          echo "Downloading BuildKit..."
+          wget https://github.com/moby/buildkit/releases/download/v0.11.3/buildkit-v0.11.3.linux-amd64.tar.gz
+          tar -xzvf buildkit-v0.11.3.linux-amd64.tar.gz
+          chmod +x bin/buildkitd bin/buildctl
+          # Move binaries to current directory for easier access
+          mv bin/buildkitd .
+          mv bin/buildctl .
+          echo "BuildKit binaries installed."
+
+      - name: Start BuildKit daemon
+        run: |
+          echo "Starting buildkitd..."
+          nohup ./buildkitd --addr tcp://127.0.0.1:1234 > buildkitd.log 2>&1 &
+          echo "Waiting for BuildKit to be available..."
+          for i in {1..20}; do
+            if nc -z 127.0.0.1 1234; then
+              echo "BuildKit is up"
               exit 0
             fi
-            echo "Waiting for BuildKit service..."
-            sleep 3
+            echo "Waiting for BuildKit... attempt $i"
+            sleep 5
           done
-          echo "BuildKit service did not become available" >&2
+          echo "BuildKit did not start in time. Log output:"
+          cat buildkitd.log
           exit 1
 
       - name: Buildctl Login to Docker Hub
         run: |
-          docker run --rm --network host moby/buildkit:buildx-stable-1 buildctl login docker.io \
-            --username ${{ vars.DOCKER_USERNAME }} \
-            --password ${{ secrets.DOCKER_ACCESS_TOKEN }} \
-            --addr tcp://localhost:1234
+          ./buildctl login docker.io \
+            --username "${{ vars.DOCKER_USERNAME }}" \
+            --password "${{ secrets.DOCKER_ACCESS_TOKEN }}" \
+            --addr tcp://127.0.0.1:1234
 
       - name: Generate the Next Tag
         id: tag
         run: |
-          echo "Generating the next tag for service: ${{ matrix.service }}"
+          echo "Generating tag for service: ${{ matrix.service }}"
           BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME=${{ matrix.service }}
-          TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
-            -H "Content-Type: application/json" \
-            -d '{"username": "'${{ vars.DOCKER_USERNAME }}'", "password": "'${{ secrets.DOCKER_ACCESS_TOKEN }}'"}' | jq -r .token)
-          REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ vars.DOCKER_USERNAME }}/$SERVICE_NAME/")
-          if [ "$REPO_CHECK" -ne 200 ]; then
-            echo "Repository does not exist. Assuming a first-time build."
-            NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
-          else
-            EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
-              "https://hub.docker.com/v2/repositories/${{ vars.DOCKER_USERNAME }}/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-            LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}" | sort -V )
-            if [ -z "$LATEST_TAG" ]; then
-              NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
-            fi
-          fi
+          NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
           echo "::set-output name=tag::$NEXT_TAG"
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Generated Tag: $NEXT_TAG"
 
       - name: Verify Buildctl installation
-        run: docker run --rm --network host moby/buildkit:buildx-stable-1 buildctl --version
+        run: ./buildctl --version
 
       - name: Build and Push audit-service Docker image with buildctl
         run: |
-          docker run --rm --network host \
-            -v ${{ github.workspace }}:/workspace \
-            moby/buildkit:buildx-stable-1 buildctl build \
-            --addr tcp://localhost:1234 \
+          ./buildctl build \
+            --addr tcp://127.0.0.1:1234 \
             --frontend dockerfile.v0 \
-            --local context=/workspace \
-            --local dockerfile=/workspace/build/maven \
+            --local context=. \
+            --local dockerfile=build/maven \
             --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service
 
       - name: Build and Push audit-service db Docker image with buildctl
         run: |
-          docker run --rm --network host \
-            -v ${{ github.workspace }}:/workspace \
-            moby/buildkit:buildx-stable-1 buildctl build \
-            --addr tcp://localhost:1234 \
+          ./buildctl build \
+            --addr tcp://127.0.0.1:1234 \
             --frontend dockerfile.v0 \
-            --local context=/workspace/core-services/audit-service/src/main/resources/db \
-            --local dockerfile=/workspace/core-services/audit-service/src/main/resources/db \
+            --local context=core-services/audit-service/src/main/resources/db \
+            --local dockerfile=core-services/audit-service/src/main/resources/db \
             --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service-db
