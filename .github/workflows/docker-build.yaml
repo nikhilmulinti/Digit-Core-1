@@ -52,12 +52,22 @@ jobs:
           cat buildkitd.log
           exit 1
 
-      - name: Buildctl Login to Docker Hub
+      - name: Configure Docker credentials for BuildKit
         run: |
-          ./buildctl login docker.io \
-            --username "${{ vars.DOCKER_USERNAME }}" \
-            --password "${{ secrets.DOCKER_ACCESS_TOKEN }}" \
-            --addr tcp://127.0.0.1:1234
+          echo "Configuring Docker credentials..."
+          mkdir -p ~/.docker
+          # Create the auth string as base64(username:password)
+          AUTH=$(echo -n "${{ vars.DOCKER_USERNAME }}:${{ secrets.DOCKER_ACCESS_TOKEN }}" | base64 | tr -d '\n')
+          cat <<EOF > ~/.docker/config.json
+{
+  "auths": {
+    "docker.io": {
+      "auth": "$AUTH"
+    }
+  }
+}
+EOF
+          echo "Docker credentials configured."
 
       - name: Generate the Next Tag
         id: tag
