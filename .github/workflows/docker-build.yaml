@@ -25,6 +25,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install and Start containerd
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y containerd
+          sudo systemctl start containerd
+          sudo systemctl status containerd
+
       - name: Install BuildKit binaries
         run: |
           wget https://github.com/moby/buildkit/releases/download/v0.11.3/buildkit-v0.11.3.linux-amd64.tar.gz
@@ -32,9 +39,9 @@ jobs:
           chmod +x bin/buildkitd bin/buildctl
           mv bin/buildkitd bin/buildctl ./
 
-      - name: Start BuildKit daemon
+      - name: Start BuildKit daemon with containerd worker
         run: |
-          sudo nohup ./buildkitd --addr tcp://127.0.0.1:1234 > buildkitd.log 2>&1 &
+          sudo nohup ./buildkitd --addr tcp://127.0.0.1:1234 --oci-worker=false --containerd-worker=true > buildkitd.log 2>&1 &
           for i in {1..20}; do
             if nc -z 127.0.0.1 1234; then
               echo "BuildKit is up"
