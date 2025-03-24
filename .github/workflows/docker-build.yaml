@@ -25,6 +25,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up QEMU emulation
+        uses: docker/setup-qemu-action@v3
+
       - name: Install BuildKit binaries
         run: |
           wget https://github.com/moby/buildkit/releases/download/v0.11.3/buildkit-v0.11.3.linux-amd64.tar.gz
