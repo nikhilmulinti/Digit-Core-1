@@ -13,7 +13,8 @@ env:
 
 jobs:
   build:
-    runs-on: arc-runner-set
+    # runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         service: [ "audit-service" ]
