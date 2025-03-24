@@ -46,8 +46,7 @@ jobs:
 
       - name: Buildctl Login to Docker Hub
         run: |
-          # Log in to Docker Hub via buildctl. This stores credentials in the BuildKit daemon.
-          buildctl login docker.io \
+          docker run --rm --network host moby/buildkit:buildx-stable-1 buildctl login docker.io \
             --username ${{ vars.DOCKER_USERNAME }} \
             --password ${{ secrets.DOCKER_ACCESS_TOKEN }} \
             --addr tcp://localhost:1234
@@ -81,26 +80,30 @@ jobs:
           echo "Generated Tag: $NEXT_TAG"
 
       - name: Verify Buildctl installation
-        run: buildctl --version
+        run: docker run --rm --network host moby/buildkit:buildx-stable-1 buildctl --version
 
       - name: Build and Push audit-service Docker image with buildctl
         run: |
-          buildctl build \
+          docker run --rm --network host \
+            -v ${{ github.workspace }}:/workspace \
+            moby/buildkit:buildx-stable-1 buildctl build \
             --addr tcp://localhost:1234 \
             --frontend dockerfile.v0 \
-            --local context=. \
-            --local dockerfile=build/maven \
+            --local context=/workspace \
+            --local dockerfile=/workspace/build/maven \
             --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service
 
       - name: Build and Push audit-service db Docker image with buildctl
         run: |
-          buildctl build \
+          docker run --rm --network host \
+            -v ${{ github.workspace }}:/workspace \
+            moby/buildkit:buildx-stable-1 buildctl build \
             --addr tcp://localhost:1234 \
             --frontend dockerfile.v0 \
-            --local context=core-services/audit-service/src/main/resources/db \
-            --local dockerfile=core-services/audit-service/src/main/resources/db \
+            --local context=/workspace/core-services/audit-service/src/main/resources/db \
+            --local dockerfile=/workspace/core-services/audit-service/src/main/resources/db \
             --output type=registry,name=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }},push=true \
             --opt platform=linux/arm64 \
             --opt build-arg:WORK_DIR=core-services/audit-service-db
