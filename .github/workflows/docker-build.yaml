@@ -36,9 +36,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.service }}
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ hashFiles('build/maven/Dockerfile') }}
           restore-keys: |
-            ${{ runner.os }}-buildx-
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
