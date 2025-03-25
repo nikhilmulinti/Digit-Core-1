@@ -51,8 +51,19 @@ jobs:
           exit 1
       - name: Verify Docker Hub Authentication
         run: |
-            AUTH_CHECK=$(curl -s -H "Authorization: Basic $(echo -n "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" | base64)" https://hub.docker.com/v2/users/login/)
-            echo "$AUTH_CHECK"
+            AUTH_CHECK=$(curl -s \
+              -H "Content-Type: application/json" \
+              -X POST \
+              -d '{"username": "'"${DOCKER_USERNAME}"'", "password": "'"${DOCKER_PASSWORD}"'"}' \
+              https://hub.docker.com/v2/users/login/)
+            echo "Docker Hub Response: $AUTH_CHECK"
+            TOKEN=$(echo $AUTH_CHECK | jq -r '.token')
+            if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+              echo "Authentication failed!"
+              exit 1
+            else
+              echo "Authentication successful!"
+            fi
         
       - name: Configure Docker credentials for BuildKit
         run: |
