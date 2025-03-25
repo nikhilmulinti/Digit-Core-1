@@ -25,8 +25,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up QEMU emulation
-        uses: docker/setup-qemu-action@v3
+      - name: Install QEMU for ARM64 emulation (manual installation)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          sudo systemctl restart systemd-binfmt.service
 
       - name: Install BuildKit binaries
         run: |
@@ -49,36 +52,36 @@ jobs:
           echo "BuildKit did not start in time. Log output:"
           cat buildkitd.log
           exit 1
+
       - name: Verify Docker Hub Authentication
         run: |
-            AUTH_CHECK=$(curl -s \
-              -H "Content-Type: application/json" \
-              -X POST \
-              -d '{"username": "'"${DOCKER_USERNAME}"'", "password": "'"${DOCKER_PASSWORD}"'"}' \
-              https://hub.docker.com/v2/users/login/)
-            echo "Docker Hub Response: $AUTH_CHECK"
-            TOKEN=$(echo $AUTH_CHECK | jq -r '.token')
-            if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
-              echo "Authentication failed!"
-              exit 1
-            else
-              echo "Authentication successful!"
-            fi
+          AUTH_CHECK=$(curl -s \
+            -H "Content-Type: application/json" \
+            -X POST \
+            -d '{"username": "'"${DOCKER_USERNAME}"'", "password": "'"${DOCKER_PASSWORD}"'"}' \
+            https://hub.docker.com/v2/users/login/)
+          echo "Docker Hub Response: $AUTH_CHECK"
+          TOKEN=$(echo $AUTH_CHECK | jq -r '.token')
+          if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+            echo "Authentication failed!"
+            exit 1
+          else
+            echo "Authentication successful!"
+          fi
         
       - name: Configure Docker credentials for BuildKit
         run: |
-              mkdir -p ~/.docker
-              AUTH=$(echo -n "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" | base64 | tr -d '\n')
-              cat <<EOF > ~/.docker/config.json
-              {
-                "auths": {
-                  "https://index.docker.io/v1/": {
-                    "auth": "$AUTH"
-                  }
-                }
+          mkdir -p ~/.docker
+          AUTH=$(echo -n "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" | base64 | tr -d '\n')
+          cat <<EOF > ~/.docker/config.json
+          {
+            "auths": {
+              "https://index.docker.io/v1/": {
+                "auth": "$AUTH"
               }
-              EOF
-          
+            }
+          }
+          EOF
 
       - name: Generate Tag
         id: tag
