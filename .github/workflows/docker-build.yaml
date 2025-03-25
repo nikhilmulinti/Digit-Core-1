@@ -67,15 +67,18 @@ jobs:
         
       - name: Configure Docker credentials for BuildKit
         run: |
-          mkdir -p ~/.docker
-          AUTH=$(echo -n "$DOCKER_USERNAME:$DOCKER_PASSWORD" | base64)
-          cat <<EOF > ~/.docker/config.json
-          {
-            "auths": {
-              "docker.io": {"auth": "$AUTH"}
-            }
-          }
-          EOF
+              mkdir -p ~/.docker
+              AUTH=$(echo -n "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" | base64 | tr -d '\n')
+              cat <<EOF > ~/.docker/config.json
+              {
+                "auths": {
+                  "https://index.docker.io/v1/": {
+                    "auth": "$AUTH"
+                  }
+                }
+              }
+              EOF
+          
 
       - name: Generate Tag
         id: tag
