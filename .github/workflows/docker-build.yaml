@@ -25,11 +25,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install QEMU for ARM64 emulation (manual installation)
+      - name: Install QEMU for ARM64 emulation (manual setup without systemctl)
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static binfmt-support
-          sudo systemctl restart systemd-binfmt.service
+          sudo update-binfmts --enable
+      
 
       - name: Install BuildKit binaries
         run: |
