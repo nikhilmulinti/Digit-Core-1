@@ -22,7 +22,7 @@ jobs:
     strategy:
       # Use the workflow input to determine the service name.
       matrix:
-        service: [ ${{ github.event.inputs.service }} ]
+        service: [ "${{ github.event.inputs.service }}" ]
     outputs:
       docker_image: ${{ steps.push_service.outputs.docker_image }}
       db_image: ${{ steps.push_service_db.outputs.db_image }}
@@ -108,18 +108,19 @@ jobs:
             .
           echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    #   - name: Build and Push db multiarch Docker image for audit-service
-    #     if: matrix.service == 'audit-service'
-    #     id: push_service_db
-    #     run: |
-    #       IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ github.sha }}
-    #       docker buildx build \
-    #         --platform linux/amd64,linux/arm64 \
-    #         --cache-from=type=local,src=/tmp/.buildx-cache \
-    #         --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-    #         --tag $IMAGE_TAG \
-    #         --build-arg WORK_DIR=core-services/audit-service-db \
-    #         --file core-services/audit-service/src/main/resources/db/Dockerfile \
-    #         --push \
-    #         core-services/audit-service/src/main/resources/db
-    #       echo "db_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+      # Uncomment and adjust the following step if needed for audit-service
+      # - name: Build and Push db multiarch Docker image for audit-service
+      #   if: matrix.service == 'audit-service'
+      #   id: push_service_db
+      #   run: |
+      #     IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ github.sha }}
+      #     docker buildx build \
+      #       --platform linux/amd64,linux/arm64 \
+      #       --cache-from=type=local,src=/tmp/.buildx-cache \
+      #       --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+      #       --tag $IMAGE_TAG \
+      #       --build-arg WORK_DIR=core-services/audit-service-db \
+      #       --file core-services/audit-service/src/main/resources/db/Dockerfile \
+      #       --push \
+      #       core-services/audit-service/src/main/resources/db
+      #     echo "db_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
