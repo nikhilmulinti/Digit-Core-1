@@ -1,18 +1,23 @@
+# syntax=docker/dockerfile:experimental
 FROM maven:3.9.6-amazoncorretto-17 AS build
 ARG WORK_DIR
 WORKDIR /app
 
-# Copy project files
+# Copy pom.xml and pre-fetch dependencies using cache mount
 COPY ${WORK_DIR}/pom.xml ./pom.xml
+RUN --mount=type=cache,target=/root/.m2/repository \
+    mvn dependency:go-offline -B
+
+# Copy the remaining files
 COPY build/maven/start.sh ./start.sh
 COPY ${WORK_DIR}/src ./src
 
-# Build the project
-RUN mvn -B -f /app/pom.xml package
+# Build the project using the cached Maven repository
+RUN --mount=type=cache,target=/root/.m2/repository \
+    mvn -B -f /app/pom.xml package
 
 # Runtime image – using a multi-arch base image
 FROM amazoncorretto:17-alpine
-
 WORKDIR /opt/egov
 
 # Copy artifacts from the build stage
