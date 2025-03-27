@@ -4,8 +4,13 @@ on:
   push:
     branches:
       - dev
-      # - docker-arm-update
+      - docker-arm-update
   workflow_dispatch:
+    inputs:
+      service:
+        description: 'Select the core service to build (e.g., audit-service, egov-data-uploader, etc.)'
+        required: true
+        default: 'audit-service'
 
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
@@ -15,11 +20,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      # Use the workflow input to determine the service name.
       matrix:
-        service: [ "audit-service" ]
+        service: [ ${{ github.event.inputs.service }} ]
     outputs:
-      docker_image: ${{ steps.push_audit.outputs.docker_image }}
-      db_image: ${{ steps.push_audit_db.outputs.db_image }}
+      docker_image: ${{ steps.push_service.outputs.docker_image }}
+      db_image: ${{ steps.push_service_db.outputs.db_image }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -87,32 +93,33 @@ jobs:
           docker buildx version
           docker buildx ls
 
-      - name: Build and Push audit-service multiarch Docker image
-        id: push_audit
+      - name: Build and Push ${{ matrix.service }} multiarch Docker image
+        id: push_service
         run: |
-          IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }}
+          IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --cache-from=type=local,src=/tmp/.buildx-cache \
             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
             --tag $IMAGE_TAG \
-            --build-arg WORK_DIR=core-services/audit-service \
+            --build-arg WORK_DIR=core-services/${{ matrix.service }} \
             --file build/maven/Dockerfile \
             --push \
             .
           echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Build and Push audit-service db multiarch Docker image
-        id: push_audit_db
-        run: |
-          IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }}
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-            --tag $IMAGE_TAG \
-            --build-arg WORK_DIR=core-services/audit-service-db \
-            --file core-services/audit-service/src/main/resources/db/Dockerfile \
-            --push \
-            core-services/audit-service/src/main/resources/db
-          echo "db_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
+    #   - name: Build and Push db multiarch Docker image for audit-service
+    #     if: matrix.service == 'audit-service'
+    #     id: push_service_db
+    #     run: |
+    #       IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ github.sha }}
+    #       docker buildx build \
+    #         --platform linux/amd64,linux/arm64 \
+    #         --cache-from=type=local,src=/tmp/.buildx-cache \
+    #         --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+    #         --tag $IMAGE_TAG \
+    #         --build-arg WORK_DIR=core-services/audit-service-db \
+    #         --file core-services/audit-service/src/main/resources/db/Dockerfile \
+    #         --push \
+    #         core-services/audit-service/src/main/resources/db
+    #       echo "db_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
