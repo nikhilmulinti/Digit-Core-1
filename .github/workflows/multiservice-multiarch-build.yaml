@@ -1,4 +1,4 @@
-name: Build Pipeline
+name: Build Pipeline multiservice
 
 on:
   push:
