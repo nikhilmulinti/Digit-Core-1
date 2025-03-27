@@ -84,46 +84,32 @@ jobs:
           docker buildx version
           docker buildx ls
 
-      - name: Build audit-service Docker image
-        run: |
-          docker buildx build \
-            --platform linux/arm64 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-            --tag audit-service \
-            --build-arg WORK_DIR=core-services/audit-service \
-            --file build/maven/Dockerfile \
-            --load \
-            .
-
-      - name: Push audit-service Docker Image to Docker Hub
+      - name: Build and Push audit-service multiarch Docker image
         id: push_audit
         run: |
-          docker login -u ${{ env.DOCKER_USERNAME }} -p ${{ env.DOCKER_PASSWORD }}
           IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/audit-service:${{ github.sha }}
-          docker tag audit-service $IMAGE_TAG
-          docker push $IMAGE_TAG
-          echo "Docker Image pushed: $IMAGE_TAG"
-          echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Build audit-service db Docker image
-        run: |
           docker buildx build \
-            --platform linux/arm64 \
+            --platform linux/amd64,linux/arm64 \
             --cache-from=type=local,src=/tmp/.buildx-cache \
             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-            --tag audit-service-db \
-            --build-arg WORK_DIR=core-services/audit-service-db \
-            --file core-services/audit-service/src/main/resources/db/Dockerfile \
-            --load \
-            core-services/audit-service/src/main/resources/db
+            --tag $IMAGE_TAG \
+            --build-arg WORK_DIR=core-services/audit-service \
+            --file build/maven/Dockerfile \
+            --push \
+            .
+          echo "docker_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Push audit-service db Docker Image to Docker Hub
+      - name: Build and Push audit-service db multiarch Docker image
         id: push_audit_db
         run: |
-          docker login -u ${{ env.DOCKER_USERNAME }} -p ${{ env.DOCKER_PASSWORD }}
           IMAGE_TAG=${{ vars.DOCKER_USERNAME }}/audit-service-db:${{ github.sha }}
-          docker tag audit-service-db $IMAGE_TAG
-          docker push $IMAGE_TAG
-          echo "Docker Image pushed: $IMAGE_TAG"
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+            --tag $IMAGE_TAG \
+            --build-arg WORK_DIR=core-services/audit-service-db \
+            --file core-services/audit-service/src/main/resources/db/Dockerfile \
+            --push \
+            core-services/audit-service/src/main/resources/db
           echo "db_image=$IMAGE_TAG" >> $GITHUB_OUTPUT
