@@ -24,6 +24,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2        
 
@@ -50,15 +58,12 @@ jobs:
         id: tag
         run: |
           echo "Generating the next tag for service: ${{ matrix.service }}"
-          # Set variables
           BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME=${{ matrix.service }}
-          # Log in to Docker Hub and fetch a token
           TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
             -H "Content-Type: application/json" \
             -d '{"username": "'$DOCKER_USERNAME'", "password": "'$DOCKER_PASSWORD'"}' | jq -r .token)
-          # Check if the repository exists
           REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/")
@@ -66,10 +71,8 @@ jobs:
             echo "Repository does not exist. Assuming a first-time build."
             NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
           else
-            # Fetch existing tags for the service
             EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
               "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-            # Filter for the current branch and commit hash
             LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}" | sort -V )
             if [ -z "$LATEST_TAG" ]; then
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
