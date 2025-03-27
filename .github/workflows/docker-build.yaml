@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - dev
-      - docker-arm-update
+      # - docker-arm-update
   workflow_dispatch:
 
 env:
