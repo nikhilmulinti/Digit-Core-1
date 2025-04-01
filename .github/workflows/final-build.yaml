@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [ ${{ inputs.service }} ]
+        service: [ "${{ github.event.inputs.service }}" ]
     outputs:
       docker_image: ${{ steps.save_docker_image.outputs.docker_image }}
       db_image: ${{ steps.save_db_image.outputs.db_image }}
