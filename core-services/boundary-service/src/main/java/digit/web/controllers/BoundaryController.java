@@ -22,7 +22,7 @@ public class BoundaryController {
     }
 
     /**
-     * Request handler for serving boundary entities create request.
+     * Request handlers for serving boundary entities create request.
      * @param body
      * @return
      */
