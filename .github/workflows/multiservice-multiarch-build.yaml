@@ -140,6 +140,7 @@ jobs:
         id: build_push_docker
         uses: docker/build-push-action@v5
         with:
+            platforms: linux/amd64,linux/arm64
             context: .
             file: build/maven/Dockerfile
             push: true
@@ -162,7 +163,8 @@ jobs:
         if: ${{ env.folder_exists == 'true' }}
         id: build_push_db_docker
         uses: docker/build-push-action@v5
-        with:   
+        with:
+            platforms: linux/amd64,linux/arm64   
             context: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db
             file: ${{ needs.detect-changes.outputs.root-folder }}/${{ matrix.service }}/src/main/resources/db/Dockerfile
             push: true
