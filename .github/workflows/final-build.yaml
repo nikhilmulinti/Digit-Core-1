@@ -93,7 +93,8 @@ jobs:
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
-          FOLDER_PATH="${{ matrix.service }}/src/main/resources/db"
+          # Updated the folder path to include "core-services/"
+          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
           if [ -d "$FOLDER_PATH" ]; then
             echo "folder_exists=true" >> $GITHUB_OUTPUT
           else
@@ -106,8 +107,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
-          context: ${{ matrix.service }}/src/main/resources/db
-          file: ${{ matrix.service }}/src/main/resources/db/Dockerfile
+          # Updated the context and Dockerfile path to include "core-services/"
+          context: core-services/${{ matrix.service }}/src/main/resources/db
+          file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
           push: true
           tags: |
             ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
