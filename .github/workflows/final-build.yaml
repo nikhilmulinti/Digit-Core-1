@@ -12,6 +12,10 @@ on:
         description: 'Name of the service to build and deploy'
         required: true
         type: string
+      service_folder:
+        description: 'Folder prefix for the service (e.g., core-services or business-services)'
+        required: true
+        type: string
 
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
@@ -88,13 +92,12 @@ jobs:
           tags: |
             ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
           build-args: |
-            WORK_DIR=core-services/${{ matrix.service }}
+            WORK_DIR=${{ github.event.inputs.service_folder }}/${{ matrix.service }}
 
       - name: Check if DB folder exists
         id: check-db-folder
         run: |
-          # Updated the folder path to include "core-services/"
-          FOLDER_PATH="core-services/${{ matrix.service }}/src/main/resources/db"
+          FOLDER_PATH="${{ github.event.inputs.service_folder }}/${{ matrix.service }}/src/main/resources/db"
           if [ -d "$FOLDER_PATH" ]; then
             echo "folder_exists=true" >> $GITHUB_OUTPUT
           else
@@ -107,9 +110,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           platforms: linux/amd64,linux/arm64
-          # Updated the context and Dockerfile path to include "core-services/"
-          context: core-services/${{ matrix.service }}/src/main/resources/db
-          file: core-services/${{ matrix.service }}/src/main/resources/db/Dockerfile
+          context: ${{ github.event.inputs.service_folder }}/${{ matrix.service }}/src/main/resources/db
+          file: ${{ github.event.inputs.service_folder }}/${{ matrix.service }}/src/main/resources/db/Dockerfile
           push: true
           tags: |
             ${{ vars.DOCKER_USERNAME }}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}
