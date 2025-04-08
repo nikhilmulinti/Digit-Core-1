@@ -8,14 +8,15 @@ on:
       - master
   workflow_dispatch:
     inputs:
-      service:
-        description: 'Name of the service to build and deploy'
-        required: true
-        type: string
       service_folder:
         description: 'Folder prefix for the service (e.g., core-services or business-services)'
         required: true
         type: string
+      service:
+        description: 'Name of the service to build and deploy'
+        required: true
+        type: string
+
 
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
