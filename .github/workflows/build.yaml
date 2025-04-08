@@ -1,4 +1,4 @@
-name: Dynamic Build and Deployment Pipeline
+name: Build Pipeline
 
 on:
   push:
