@@ -17,7 +17,6 @@ on:
         required: true
         type: string
 
-
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_ACCESS_TOKEN }}
@@ -25,6 +24,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # For a single service input, you might replace the matrix with direct reference.
     strategy:
       matrix:
         service: [ "${{ github.event.inputs.service }}" ]
@@ -38,11 +38,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Cache Docker layers
+      - name: Cache Docker Layers
         uses: actions/cache@v3
         with:
+          # Optionally, consider including branch info if needed:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.service }}
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.ref_name }}
           restore-keys: |
             ${{ runner.os }}-buildx-
 
@@ -55,14 +56,22 @@ jobs:
       - name: Generate the Next Tag
         id: tag
         run: |
-          BRANCH=${{ github.ref_name }}
+          set -euxo pipefail
+          BRANCH="${GITHUB_REF##*/}"
           COMMIT_HASH=$(git rev-parse --short HEAD)
-          SERVICE_NAME=${{ matrix.service }}
+          SERVICE_NAME="${{ matrix.service }}"
 
+          # Log in to Docker Hub via API to get token.
           TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
             -H "Content-Type: application/json" \
-            -d '{"username": "'$DOCKER_USERNAME'", "password": "'$DOCKER_PASSWORD'"}' | jq -r .token)
+            -d "{\"username\": \"$DOCKER_USERNAME\", \"password\": \"$DOCKER_PASSWORD\"}" | jq -r .token)
 
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to authenticate with Docker Hub."
+            exit 1
+          fi
+
+          # Check if the repository exists
           REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/")
@@ -72,16 +81,18 @@ jobs:
           else
             EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
               "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-
-            LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}" | sort -V )
+            # Find tags that match the current branch and commit hash
+            LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}" | sort -V | tail -n 1)
             if [ -z "$LATEST_TAG" ]; then
               NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
+            else
+              NEXT_TAG="$LATEST_TAG"
             fi
           fi
 
-          echo "::set-output name=tag::$NEXT_TAG"
-          echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
-
+          echo "tag=$NEXT_TAG" >> "$GITHUB_OUTPUT"
+          echo "NEXT_TAG=$NEXT_TAG" >> "$GITHUB_ENV"
+      
       - name: Build and Push Application Docker Image
         id: build_push_docker
         uses: docker/build-push-action@v5
@@ -100,9 +111,9 @@ jobs:
         run: |
           FOLDER_PATH="${{ github.event.inputs.service_folder }}/${{ matrix.service }}/src/main/resources/db"
           if [ -d "$FOLDER_PATH" ]; then
-            echo "folder_exists=true" >> $GITHUB_OUTPUT
+            echo "folder_exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "folder_exists=false" >> $GITHUB_OUTPUT
+            echo "folder_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and Push Database Docker Image
@@ -120,12 +131,12 @@ jobs:
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
-          DOCKER="$DOCKER_USERNAME/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker_image=$DOCKER" >> "$GITHUB_OUTPUT"
+          DOCKER_IMAGE="${DOCKER_USERNAME}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "docker_image=$DOCKER_IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Save Database Docker Image
         id: save_db_image
         if: ${{ steps.check-db-folder.outputs.folder_exists == 'true' }}
         run: |
-          DB="$DOCKER_USERNAME/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db_image=$DB" >> "$GITHUB_OUTPUT"
+          DB_IMAGE="${DOCKER_USERNAME}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "db_image=$DB_IMAGE" >> "$GITHUB_OUTPUT"
