@@ -2,16 +2,21 @@ name: Build Pipeline
 
 on:
   push:
-    # branches:
-    #   - dev
-    #   - docker-arm-update
-    #   - master
+    branches:
+      - dev
+      - docker-arm-update
+      - master
   workflow_dispatch:
     inputs:
       service_folder:
-        description: 'Folder prefix for the service (e.g., core-services or business-services)'
+        description: 'Folder prefix for the service'
         required: true
-        type: string
+        type: choice
+        options:
+          - core-services
+          - business-services
+          - shared-services
+        default: core-services
       service:
         description: 'Name of the service to build and deploy'
         required: true
@@ -31,6 +36,7 @@ jobs:
     outputs:
       docker_image: ${{ steps.save_docker_image.outputs.docker_image }}
       db_image: ${{ steps.save_db_image.outputs.db_image }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -57,22 +63,20 @@ jobs:
         run: |
           set -euxo pipefail
 
-          # Extract the branch name from the ref.
           BRANCH="${GITHUB_REF##*/}"
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME="${{ matrix.service }}"
 
-          # Log in to Docker Hub API to fetch a token.
           TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login/" \
             -H "Content-Type: application/json" \
-            -d "{\"username\": \"$DOCKER_USERNAME\", \"password\": \"$DOCKER_PASSWORD\"}" | jq -r .token)
+            -d "{\"username\": \"$DOCKER_USERNAME\", \"password\": \"$DOCKER_PASSWORD\"}" \
+            | jq -r .token)
 
           if [ -z "$TOKEN" ]; then
             echo "Failed to authenticate with Docker Hub." >&2
             exit 1
           fi
 
-          # Check if the Docker repository exists.
           REPO_CHECK=$(curl -s -o /dev/null -w '%{http_code}' \
             -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/")
@@ -80,17 +84,11 @@ jobs:
           if [ "$REPO_CHECK" -ne 200 ]; then
             NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
           else
-            # Retrieve existing tags and avoid failure when grep finds no match.
             EXISTING_TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
-              "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" | jq -r '.results[].name')
-            
+              "https://hub.docker.com/v2/repositories/$DOCKER_USERNAME/$SERVICE_NAME/tags?page_size=100" \
+              | jq -r '.results[].name')
             LATEST_TAG=$(echo "$EXISTING_TAGS" | grep "^${BRANCH}-${COMMIT_HASH}" || true | sort -V | tail -n 1)
-            
-            if [ -z "$LATEST_TAG" ]; then
-              NEXT_TAG="${BRANCH}-${COMMIT_HASH}"
-            else
-              NEXT_TAG="$LATEST_TAG"
-            fi
+            NEXT_TAG="${LATEST_TAG:-${BRANCH}-${COMMIT_HASH}}"
           fi
 
           echo "tag=$NEXT_TAG" >> "$GITHUB_OUTPUT"
@@ -134,12 +132,10 @@ jobs:
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
-          DOCKER_IMAGE="${DOCKER_USERNAME}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
-          echo "docker_image=$DOCKER_IMAGE" >> "$GITHUB_OUTPUT"
+          echo "docker_image=${DOCKER_USERNAME}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> "$GITHUB_OUTPUT"
 
       - name: Save Database Docker Image
         id: save_db_image
         if: ${{ steps.check-db-folder.outputs.folder_exists == 'true' }}
         run: |
-          DB_IMAGE="${DOCKER_USERNAME}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
-          echo "db_image=$DB_IMAGE" >> "$GITHUB_OUTPUT"
+          echo "db_image=${DOCKER_USERNAME}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> "$GITHUB_OUTPUT"
