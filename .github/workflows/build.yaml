@@ -3,14 +3,11 @@ name: Build Pipeline
 on:
   push:
     branches:
+      - dev
       - docker-arm-update
       - master
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to build from'
-        required: true
-        type: string
       service_folder:
         description: 'Folder prefix for the service (e.g., core-services or business-services)'
         required: true
@@ -19,6 +16,7 @@ on:
         description: 'Name of the service to build and deploy'
         required: true
         type: string
+
 
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
@@ -34,16 +32,11 @@ jobs:
       docker_image: ${{ steps.save_docker_image.outputs.docker_image }}
       db_image: ${{ steps.save_db_image.outputs.db_image }}
     steps:
-      - name: Checkout Code from selected branch
+      - name: Checkout Code
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3  
 
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -62,7 +55,7 @@ jobs:
       - name: Generate the Next Tag
         id: tag
         run: |
-          BRANCH=${{ github.event.inputs.branch }}
+          BRANCH=${{ github.ref_name }}
           COMMIT_HASH=$(git rev-parse --short HEAD)
           SERVICE_NAME=${{ matrix.service }}
 
