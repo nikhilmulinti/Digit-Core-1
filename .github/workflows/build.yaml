@@ -174,10 +174,14 @@ jobs:
       - name: Save Application Docker Image
         id: save_docker_image
         run: |
-          echo "docker_image=${DOCKER_USERNAME}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          IMG="${DOCKER_USERNAME}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}"
+          echo "$IMG"
+          echo "docker_image=$IMG" >> "$GITHUB_OUTPUT"
 
       - name: Save Database Docker Image
         id: save_db_image
         if: ${{ steps.check-db-folder.outputs.folder_exists == 'true' }}
         run: |
-          echo "db_image=${DOCKER_USERNAME}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          IMG="${DOCKER_USERNAME}/${{ matrix.service }}-db:${{ steps.tag.outputs.tag }}"
+          echo "$IMG"
+          echo "db_image=$IMG" >> "$GITHUB_OUTPUT"
